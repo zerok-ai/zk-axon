@@ -1,8 +1,6 @@
 package service
 
 import (
-	"axon/internal/tracePersistence/model"
-	"axon/internal/tracePersistence/model/dto"
 	traceResponse "axon/internal/tracePersistence/model/response"
 	"axon/internal/tracePersistence/repository"
 	"fmt"
@@ -18,7 +16,6 @@ type TracePersistenceService interface {
 	GetTraces(scenarioId string, offset, limit int) (traceResponse.TraceResponse, *zkErrors.ZkError)
 	GetTracesMetadata(traceId, spanId string, offset, limit int) (traceResponse.SpanResponse, *zkErrors.ZkError)
 	GetTracesRawData(traceId, spanId string, offset, limit int) (traceResponse.TraceRawDataResponse, *zkErrors.ZkError)
-	SaveTraceList([]model.Scenario) *zkErrors.ZkError
 	GetMetadataMap(duration string, offset, limit int) (traceResponse.MetadataMapResponse, *zkErrors.ZkError)
 }
 
@@ -110,47 +107,6 @@ func (s tracePersistenceService) GetTracesRawData(traceId, spanId string, offset
 
 	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
 	return response, &zkErr
-}
-
-func (s tracePersistenceService) SaveTraceList(scenarios []model.Scenario) *zkErrors.ZkError {
-	if len(scenarios) == 0 {
-		return zkCommon.ToPtr(zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, "length of scenarios is 0"))
-	}
-
-	// TODO: discuss if the below condition of length > 100 is fine. or it should be read from some config
-	threshold := 100
-	if len(scenarios) > threshold {
-		return zkCommon.ToPtr(zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, fmt.Sprintf("length of scenarios is > %d", threshold)))
-	}
-
-	traceDtoList := make([]dto.ScenarioTableDto, 0)
-	spanDtoList := make([]dto.SpanTableDto, 0)
-	spanRawDataDtoList := make([]dto.SpanRawDataTableDto, 0)
-	for _, scenario := range scenarios {
-		if b, zkErr := dto.ValidateScenario(scenario); !b || zkErr != nil {
-			zkLogger.Error("Invalid scenario", zkErr)
-			continue
-		}
-
-		t, tmd, trd, err := dto.ConvertScenarioToTraceDto(scenario)
-		if err != nil {
-			zkLogger.Error(LogTag, err)
-			continue
-		}
-
-		traceDtoList = append(traceDtoList, t...)
-		spanDtoList = append(spanDtoList, tmd...)
-		spanRawDataDtoList = append(spanRawDataDtoList, trd...)
-
-	}
-
-	err := s.repo.SaveTraceList(traceDtoList, spanDtoList, spanRawDataDtoList)
-	if err != nil {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
-		return &zkErr
-	}
-
-	return nil
 }
 
 func (s tracePersistenceService) GetMetadataMap(duration string, offset, limit int) (traceResponse.MetadataMapResponse, *zkErrors.ZkError) {
