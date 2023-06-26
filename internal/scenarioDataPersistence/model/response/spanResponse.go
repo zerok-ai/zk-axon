@@ -1,7 +1,7 @@
-package traceresponse
+package scenariodataresponse
 
 import (
-	"axon/internal/tracePersistence/model/dto"
+	"axon/internal/scenarioDataPersistence/model/dto"
 	"github.com/lib/pq"
 )
 

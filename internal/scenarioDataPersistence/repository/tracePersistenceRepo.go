@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"axon/internal/tracePersistence/model/dto"
+	"axon/internal/scenarioDataPersistence/model/dto"
 	"axon/utils"
 	"log"
 	"time"
@@ -49,7 +49,7 @@ type TracePersistenceRepo interface {
 	GetTraces(scenarioId string, offset, limit int) ([]dto.ScenarioTableDto, error)
 	GetSpan(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error)
 	GetSpanRawData(traceId, spanId string, offset, limit int) ([]dto.SpanRawDataTableDto, error)
-	GetMetadataMap(st string, offset, limit int) ([]dto.MetadataMap, error)
+	GetMetadataMap(st string, offset, limit int) ([]dto.MetadataMapDto, error)
 }
 
 type tracePersistenceRepo struct {
@@ -185,7 +185,7 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string, offset, lim
 	return responseArr, nil
 }
 
-func (z tracePersistenceRepo) GetMetadataMap(st string, offset, limit int) ([]dto.MetadataMap, error) {
+func (z tracePersistenceRepo) GetMetadataMap(st string, offset, limit int) ([]dto.MetadataMapDto, error) {
 	twoMinutesAgo := time.Now().Add(-40000 * time.Minute)
 	rows, err, closeRow := z.dbRepo.GetAll(GetMetadataMapQueryUsingDuration, []any{twoMinutesAgo, limit, offset})
 	defer closeRow()
@@ -195,9 +195,9 @@ func (z tracePersistenceRepo) GetMetadataMap(st string, offset, limit int) ([]dt
 		return nil, err
 	}
 
-	var responseArr []dto.MetadataMap
+	var responseArr []dto.MetadataMapDto
 	for rows.Next() {
-		var rawData dto.MetadataMap
+		var rawData dto.MetadataMapDto
 		err := rows.Scan(&rawData.Source, &rawData.Destination, &rawData.TraceCount, &rawData.ProtocolList)
 		if err != nil {
 			log.Fatal(err)

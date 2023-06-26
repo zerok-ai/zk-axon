@@ -1,18 +1,18 @@
-package traceresponse
+package scenariodataresponse
 
 import (
-	"axon/internal/tracePersistence/model/dto"
+	"axon/internal/scenarioDataPersistence/model/dto"
 	"strings"
 )
 
 type MetadataMapResponse struct {
-	MetadataMapList []dto.MetadataMap `json:"metadata_map_list"`
+	MetadataMapList []dto.MetadataMapDto `json:"metadata_map_list"`
 }
 
-func ConvertMetadataMapToMetadataMapResponse(t []dto.MetadataMap) (*MetadataMapResponse, *error) {
-	var resList []dto.MetadataMap
+func ConvertMetadataMapToMetadataMapResponse(t []dto.MetadataMapDto) (*MetadataMapResponse, *error) {
+	var resList []dto.MetadataMapDto
 	for _, v := range t {
-		x := dto.MetadataMap{
+		x := dto.MetadataMapDto{
 			Source:       removeLastTwoStrings(v.Source),
 			Destination:  removeLastTwoStrings(v.Destination),
 			TraceCount:   v.TraceCount,

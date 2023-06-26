@@ -1,9 +1,9 @@
 package handler
 
 import (
-	traceResponse "axon/internal/tracePersistence/model/response"
-	"axon/internal/tracePersistence/service"
-	"axon/internal/tracePersistence/validation"
+	traceResponse "axon/internal/scenarioDataPersistence/model/response"
+	"axon/internal/scenarioDataPersistence/service"
+	"axon/internal/scenarioDataPersistence/validation"
 	"axon/utils"
 	"github.com/kataras/iris/v12"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
@@ -13,8 +13,8 @@ import (
 type TracePersistenceHandler interface {
 	GetIncidents(ctx iris.Context)
 	GetTraces(ctx iris.Context)
-	GetTracesMetadata(ctx iris.Context)
-	GetTracesRawData(ctx iris.Context)
+	GetSpan(ctx iris.Context)
+	GetSpanRawData(ctx iris.Context)
 	GetMetadataMapData(ctx iris.Context)
 }
 
@@ -74,7 +74,7 @@ func (t tracePersistenceHandler) GetTraces(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
-func (t tracePersistenceHandler) GetTracesMetadata(ctx iris.Context) {
+func (t tracePersistenceHandler) GetSpan(ctx iris.Context) {
 	traceId := ctx.URLParam(utils.TraceId)
 	spanId := ctx.URLParam(utils.SpanId)
 	limit := ctx.URLParamDefault(utils.Limit, "50")
@@ -97,7 +97,7 @@ func (t tracePersistenceHandler) GetTracesMetadata(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
-func (t tracePersistenceHandler) GetTracesRawData(ctx iris.Context) {
+func (t tracePersistenceHandler) GetSpanRawData(ctx iris.Context) {
 	traceId := ctx.URLParam(utils.TraceId)
 	spanId := ctx.URLParam(utils.SpanId)
 	limit := ctx.URLParamDefault(utils.Limit, "50")
@@ -115,7 +115,7 @@ func (t tracePersistenceHandler) GetTracesRawData(ctx iris.Context) {
 
 	resp, err := t.service.GetTracesRawData(traceId, spanId, o, l)
 
-	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.TraceRawDataResponse](200, resp, resp, err)
+	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.SpanRawDataResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 }

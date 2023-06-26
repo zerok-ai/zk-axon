@@ -1,12 +1,12 @@
-package traceresponse
+package scenariodataresponse
 
 import (
-	"axon/internal/tracePersistence/model/dto"
+	"axon/internal/scenarioDataPersistence/model/dto"
 	"github.com/zerok-ai/zk-utils-go/crypto"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 )
 
-type TraceRawDataResponse struct {
+type SpanRawDataResponse struct {
 	Spans SpansRawDataDetailsMap `json:"spans"`
 }
 
@@ -17,7 +17,7 @@ type SpanRawDataDetails struct {
 	ResponsePayload string `json:"response_payload"`
 }
 
-func ConvertTraceRawDataToTraceRawDataResponse(t []dto.SpanRawDataTableDto) (*TraceRawDataResponse, *error) {
+func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataTableDto) (*SpanRawDataResponse, *error) {
 	respMap := make(map[string]SpanRawDataDetails, 0)
 	for _, v := range t {
 		reqDecompressedStr, err := crypto.DecompressStringGzip(v.RequestPayload)
@@ -39,7 +39,7 @@ func ConvertTraceRawDataToTraceRawDataResponse(t []dto.SpanRawDataTableDto) (*Tr
 		respMap[v.SpanId] = s
 	}
 
-	resp := TraceRawDataResponse{Spans: respMap}
+	resp := SpanRawDataResponse{Spans: respMap}
 
 	return &resp, nil
 }

@@ -1,8 +1,8 @@
 package service
 
 import (
-	traceResponse "axon/internal/tracePersistence/model/response"
-	"axon/internal/tracePersistence/repository"
+	traceResponse "axon/internal/scenarioDataPersistence/model/response"
+	"axon/internal/scenarioDataPersistence/repository"
 	"fmt"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
@@ -15,7 +15,7 @@ type TracePersistenceService interface {
 	GetIncidentData(scenarioType, source string, offset, limit int) (traceResponse.IncidentResponse, *zkErrors.ZkError)
 	GetTraces(scenarioId string, offset, limit int) (traceResponse.TraceResponse, *zkErrors.ZkError)
 	GetTracesMetadata(traceId, spanId string, offset, limit int) (traceResponse.SpanResponse, *zkErrors.ZkError)
-	GetTracesRawData(traceId, spanId string, offset, limit int) (traceResponse.TraceRawDataResponse, *zkErrors.ZkError)
+	GetTracesRawData(traceId, spanId string, offset, limit int) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
 	GetMetadataMap(duration string, offset, limit int) (traceResponse.MetadataMapResponse, *zkErrors.ZkError)
 }
 
@@ -56,7 +56,7 @@ func (s tracePersistenceService) GetTraces(scenarioId string, offset, limit int)
 
 	data, err := s.repo.GetTraces(scenarioId, offset, limit)
 	if err == nil {
-		response, respErr := traceResponse.ConvertTraceToTraceResponse(data)
+		response, respErr := traceResponse.ConvertScenarioTableDtoToTraceResponse(data)
 		if respErr != nil {
 			zkLogger.Error(LogTag, err)
 		}
@@ -86,8 +86,8 @@ func (s tracePersistenceService) GetTracesMetadata(traceId, spanId string, offse
 	return response, &zkErr
 }
 
-func (s tracePersistenceService) GetTracesRawData(traceId, spanId string, offset, limit int) (traceResponse.TraceRawDataResponse, *zkErrors.ZkError) {
-	var response traceResponse.TraceRawDataResponse
+func (s tracePersistenceService) GetTracesRawData(traceId, spanId string, offset, limit int) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError) {
+	var response traceResponse.SpanRawDataResponse
 	//TODO: discuss if the below condition of limit > 100 is fine. or it should be read from some config
 	threshold := 100
 	if offset < 0 || limit < 1 || limit > threshold {
@@ -97,7 +97,7 @@ func (s tracePersistenceService) GetTracesRawData(traceId, spanId string, offset
 
 	data, err := s.repo.GetSpanRawData(traceId, spanId, offset, limit)
 	if err == nil {
-		response, respErr := traceResponse.ConvertTraceRawDataToTraceRawDataResponse(data)
+		response, respErr := traceResponse.ConvertSpanRawDataToSpanRawDataResponse(data)
 		if respErr != nil {
 			zkLogger.Error(LogTag, err)
 		}

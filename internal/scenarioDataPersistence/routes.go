@@ -1,7 +1,7 @@
-package tracePersistence
+package scenarioDataPersistence
 
 import (
-	"axon/internal/tracePersistence/handler"
+	"axon/internal/scenarioDataPersistence/handler"
 	"github.com/kataras/iris/v12/core/router"
 )
 
@@ -11,8 +11,8 @@ func Initialize(app router.Party, tph handler.TracePersistenceHandler) {
 	{
 		ruleEngineAPI.Get("/incident", tph.GetIncidents)
 		ruleEngineAPI.Get("/", tph.GetTraces)
-		ruleEngineAPI.Get("/metadata", tph.GetTracesMetadata)
-		ruleEngineAPI.Get("/raw-data", tph.GetTracesRawData)
+		ruleEngineAPI.Get("/metadata", tph.GetSpan)
+		ruleEngineAPI.Get("/raw-data", tph.GetSpanRawData)
 		ruleEngineAPI.Get("/metadata/map", tph.GetMetadataMapData)
 	}
 }

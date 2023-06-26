@@ -1,16 +1,16 @@
-package traceresponse
+package scenariodataresponse
 
 import (
-	"axon/internal/tracePersistence/model/dto"
+	"axon/internal/scenarioDataPersistence/model/dto"
 )
 
-var LogTag = "trace_response"
+var LogTag = "scenario_response"
 
 type TraceResponse struct {
 	TraceIdList []string `json:"trace_id_list"`
 }
 
-func ConvertTraceToTraceResponse(t []dto.ScenarioTableDto) (*TraceResponse, *error) {
+func ConvertScenarioTableDtoToTraceResponse(t []dto.ScenarioTableDto) (*TraceResponse, *error) {
 	traceIdList := make([]string, 0)
 	for _, v := range t {
 		traceIdList = append(traceIdList, v.TraceId)

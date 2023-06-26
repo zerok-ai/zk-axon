@@ -2,10 +2,10 @@ package main
 
 import (
 	"axon/internal/config"
-	"axon/internal/tracePersistence"
-	"axon/internal/tracePersistence/handler"
-	"axon/internal/tracePersistence/repository"
-	"axon/internal/tracePersistence/service"
+	"axon/internal/scenarioDataPersistence"
+	"axon/internal/scenarioDataPersistence/handler"
+	"axon/internal/scenarioDataPersistence/repository"
+	"axon/internal/scenarioDataPersistence/service"
 	"github.com/kataras/iris/v12"
 	zkConfig "github.com/zerok-ai/zk-utils-go/config"
 	zkHttpConfig "github.com/zerok-ai/zk-utils-go/http/config"
@@ -78,7 +78,7 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 	}).Describe("healthcheck")
 
 	v1 := app.Party("/v1")
-	tracePersistence.Initialize(v1, tph)
+	scenarioDataPersistence.Initialize(v1, tph)
 
 	return app
 }
