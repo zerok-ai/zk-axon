@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zk-axon
+  labels:
+    app: zk-axon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zk-axon
+  template:
+    metadata:
+      labels:
+        app: zk-axon
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: zk-axon
+      containers:
+        - name: zk-axon
+          image: zk-axon:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /zk/config
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            successThreshold: 3
+          env: # Setting Enviornmental Variables
+            - name: PL_POSTGRES_USERNAME  # Setting Database username from Secret
+              valueFrom:
+                secretKeyRef:
+                  name: pl-db-secrets
+                  key: PL_POSTGRES_USERNAME
+
+            - name: PL_POSTGRES_PASSWORD # Setting Database password from Secret
+              valueFrom:
+                secretKeyRef:
+                  name: pl-db-secrets
+                  key: PL_POSTGRES_PASSWORD
+
+---
+apiVersion: v1
+data:
+  config.yaml: |+
+    server:
+      host: localhost
+      port: 80
+    
+    logs:
+      color: true
+      level: DEBUG
+    
+    http:
+      debug: true
+    
+    postgres:
+      host: postgres-postgresql.zk-client.svc.cluster.local
+      port: 5432
+      user: "pl"
+      password: "pl"
+      dbname: "pl"
+      max_connections: 5
+      max_idle_connections: 5
+      connection_max_lifetime_in_minutes: 10
+kind: ConfigMap
+metadata:
+  name: zk-axon

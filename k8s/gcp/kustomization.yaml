@@ -1,0 +1,10 @@
+resources:
+  - ../minikube
+
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: zk-axon
+    path: image-patch.yaml

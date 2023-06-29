@@ -4,3 +4,4 @@ vendor/
 main
 coverage.out
 
+/zk-axon
