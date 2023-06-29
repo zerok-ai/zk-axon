@@ -1,6 +1,11 @@
 package utils
 
-import "time"
+import (
+	zkCommon "github.com/zerok-ai/zk-utils-go/common"
+	"regexp"
+	"strings"
+	"time"
+)
 
 const (
 	ScenarioType = "scenario_type"
@@ -13,6 +18,8 @@ const (
 	Offset       = "offset"
 	Duration     = "duration"
 )
+
+var TimeUnitPxl = []string{"s", "m", "h", "d", "mon"}
 
 func ParseTimestamp(timestamp string) (time.Time, error) {
 	// Define the layout of the timestamp string
@@ -33,4 +40,33 @@ func CalendarDaysBetween(start, end time.Time) int {
 	duration := end.Sub(start)
 	days := int(duration.Hours() / 24)
 	return days
+}
+
+func IsValidPxlTime(s string) bool {
+	re := regexp.MustCompile("[0-9]+")
+	d := re.FindAllString(s, -1)
+	if len(d) != 1 {
+		return false
+	}
+
+	t := strings.Split(s, d[0])
+	var params = make([]string, 0)
+	for _, v := range t {
+		if !zkCommon.IsEmpty(v) {
+			params = append(params, v)
+		}
+	}
+	if len(params) == 2 {
+		if !zkCommon.Contains(TimeUnitPxl, params[1]) || params[0] != "-" {
+			return false
+		}
+	} else if len(params) == 1 {
+		if !zkCommon.Contains(TimeUnitPxl, params[0]) {
+			return false
+		}
+	} else {
+		return false
+	}
+
+	return true
 }

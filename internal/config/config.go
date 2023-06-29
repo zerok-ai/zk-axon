@@ -6,7 +6,6 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 	zkHttpConfig "github.com/zerok-ai/zk-utils-go/http/config"
 	zkLogsConfig "github.com/zerok-ai/zk-utils-go/logs/config"
-	storage "github.com/zerok-ai/zk-utils-go/storage/redis/config"
 	zkPostgresConfig "github.com/zerok-ai/zk-utils-go/storage/sqlDB/postgres/config"
 	"os"
 )
@@ -38,7 +37,6 @@ type RouterConfigs struct {
 
 // AppConfigs is an application configuration structure
 type AppConfigs struct {
-	Redis      *storage.RedisConfig            `yaml:"redis"`
 	Postgres   zkPostgresConfig.PostgresConfig `yaml:"postgres"`
 	Server     ServerConfig                    `yaml:"server"`
 	AuthConfig AuthConfig                      `yaml:"auth"`

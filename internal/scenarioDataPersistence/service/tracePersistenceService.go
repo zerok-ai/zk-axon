@@ -3,6 +3,7 @@ package service
 import (
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/repository"
+	"axon/utils"
 	"fmt"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
@@ -111,7 +112,7 @@ func (s tracePersistenceService) GetTracesRawData(traceId, spanId string, offset
 
 func (s tracePersistenceService) GetMetadataMap(duration string, offset, limit int) (traceResponse.MetadataMapResponse, *zkErrors.ZkError) {
 	var response traceResponse.MetadataMapResponse
-	if !IsValidPxlTime(duration) {
+	if !utils.IsValidPxlTime(duration) {
 		return response, zkCommon.ToPtr(zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, "invalid duration"))
 	}
 
@@ -131,12 +132,4 @@ func (s tracePersistenceService) GetMetadataMap(duration string, offset, limit i
 	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
 	return response, &zkErr
 
-}
-
-// todo: FIX BELOW METHOD
-func IsValidPxlTime(s string) bool {
-	if s != "" {
-		return true
-	}
-	return false
 }

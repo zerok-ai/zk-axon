@@ -16,8 +16,6 @@ import (
 var LogTag = "main"
 
 func main() {
-
-	// read configuration from the file and environment variables
 	var cfg config.AppConfigs
 	if err := zkConfig.ProcessArgs[config.AppConfigs](&cfg); err != nil {
 		panic(err)
