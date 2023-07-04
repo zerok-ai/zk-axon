@@ -28,6 +28,18 @@ func NewTracePersistenceHandler(persistenceService service.TracePersistenceServi
 	}
 }
 
+// GetIncidents godoc
+// @Summary Get Incidents
+// @Description Get Incidents grouped by scenario title, destination and scenario type with pagination for given source
+// @Tags trace persistence
+// @Accept json
+// @Produce json
+// @Param scenarioType query string true "Scenario Type"
+// @Param source query string true "Source"
+// @Param limit query string false "Limit"
+// @Param offset query string false "Offset"
+// @Success 200 {object} traceResponse.IncidentResponse
+// @Router /trace-persistence/incidents [get]
 func (t tracePersistenceHandler) GetIncidents(ctx iris.Context) {
 	scenarioType := ctx.URLParam(utils.ScenarioType)
 	source := ctx.URLParam(utils.Source)
@@ -52,6 +64,17 @@ func (t tracePersistenceHandler) GetIncidents(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
+// GetTraces godoc
+// @Summary Get Traces
+// @Description Get TraceId List for given scenario id with pagination
+// @Tags trace persistence
+// @Accept json
+// @Produce json
+// @Param scenarioId query string true "Scenario Id"
+// @Param limit query string false "Limit"
+// @Param offset query string false "Offset"
+// @Success 200 {object} traceResponse.TraceResponse
+// @Router /trace-persistence/traces [get]
 func (t tracePersistenceHandler) GetTraces(ctx iris.Context) {
 	scenarioId := ctx.URLParam(utils.ScenarioId)
 	limit := ctx.URLParamDefault(utils.Limit, "50")
@@ -74,6 +97,18 @@ func (t tracePersistenceHandler) GetTraces(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
+// GetSpan godoc
+// @Summary Get Span
+// @Description Get Span details for given trace id, span id with pagination. If span id is not provided, it will return all spans
+// @Tags trace persistence
+// @Accept json
+// @Produce json
+// @Param traceId query string true "Trace Id"
+// @Param spanId query string true "Span Id"
+// @Param limit query string false "Limit"
+// @Param offset query string false "Offset"
+// @Success 200 {object} traceResponse.SpanResponse
+// @Router /trace-persistence/span [get]
 func (t tracePersistenceHandler) GetSpan(ctx iris.Context) {
 	traceId := ctx.URLParam(utils.TraceId)
 	spanId := ctx.URLParam(utils.SpanId)
@@ -97,6 +132,18 @@ func (t tracePersistenceHandler) GetSpan(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
+// GetSpanRawData godoc
+// @Summary Get raw data for given trace id, span id with pagination. Here raw data means request and response payload
+// @Description Get raw data for given trace id, span id with pagination
+// @Tags trace persistence
+// @Accept json
+// @Produce json
+// @Param traceId query string true "Trace Id"
+// @Param spanId query string true "Span Id"
+// @Param limit query string false "Limit"
+// @Param offset query string false "Offset"
+// @Success 200 {object} traceResponse.SpanRawDataResponse
+// @Router /trace-persistence/span-raw-data [get]
 func (t tracePersistenceHandler) GetSpanRawData(ctx iris.Context) {
 	traceId := ctx.URLParam(utils.TraceId)
 	spanId := ctx.URLParam(utils.SpanId)
@@ -120,6 +167,17 @@ func (t tracePersistenceHandler) GetSpanRawData(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
+// GetMetadataMapData godoc
+// @Summary Get metadata map data
+// @Description Get total trace count and list of protocols between all the sources and destinations which encountered an error, in given duration with pagination
+// @Tags trace persistence
+// @Accept json
+// @Produce json
+// @Param duration query string true "Duration"
+// @Param limit query string false "Limit"
+// @Param offset query string false "Offset"
+// @Success 200 {object} traceResponse.MetadataMapResponse
+// @Router /trace-persistence/metadata-map [get]
 func (t tracePersistenceHandler) GetMetadataMapData(ctx iris.Context) {
 	d := ctx.URLParam(utils.Duration)
 	limit := ctx.URLParamDefault(utils.Limit, "50")
