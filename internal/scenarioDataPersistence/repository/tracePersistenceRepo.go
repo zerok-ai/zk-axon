@@ -3,53 +3,29 @@ package repository
 import (
 	"axon/internal/scenarioDataPersistence/model/dto"
 	"axon/utils"
-	"log"
-	"time"
-
+	"github.com/lib/pq"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	"github.com/zerok-ai/zk-utils-go/storage/sqlDB"
 )
 
 const (
-	ScenarioTraceTablePostgres = "scenario_trace"
-	SpanTablePostgres          = "span"
-	SpanRawDataTablePostgres   = "span_raw_data"
-	ErrorFlag                  = true
-
-	ScenarioId      = "scenario_id"
-	ScenarioVersion = "scenario_version"
-	TraceId         = "trace_id"
-	ScenarioTitle   = "scenario_title"
-	ScenarioType    = "scenario_type"
-
-	SpanId          = "span_id"
-	ParentSpanId    = "parent_span_id"
-	Source          = "source"
-	Destination     = "destination"
-	WorkloadIdList  = "workload_id_list"
-	Metadata        = "metadata"
-	LatencyMs       = "latency_ms"
-	Protocol        = "protocol"
-	RequestPayload  = "request_payload"
-	ResponsePayload = "response_payload"
-
-	GetIncidentData                   = "SELECT t.scenario_id, t.scenario_version, t.scenario_title, COUNT(*) AS incident_count, md.destination, min(t.created_at) as first_seen, max(t.created_at) as last_seen FROM (SELECT * FROM scenario_trace WHERE scenario_type=$1) AS t INNER JOIN (SELECT * FROM span WHERE source=$2) AS md USING(trace_id) GROUP BY t.scenario_id, t.scenario_version, t.scenario_title, md.destination  LIMIT $3 OFFSET $4"
-	GetTraceQuery                     = "SELECT scenario_version, trace_id FROM scenario_trace WHERE scenario_id=$1 LIMIT $2 OFFSET $3"
-	GetSpanRawDataQuery               = "SELECT request_payload, response_payload FROM span_raw_data WHERE trace_id=$1 AND span_id=$2 LIMIT $3 OFFSET $4"
-	GetSpanQueryUsingTraceIdAndSpanId = "SELECT span_id, parent_span_id, source, destination, workload_id_list, metadata, latency_ms, protocol FROM span WHERE trace_id=$1 AND span_id=$2 LIMIT $3 OFFSET $4"
-	GetSpanQueryUsingTraceId          = "SELECT span_id, parent_span_id, source, destination, workload_id_list, metadata, latency_ms, protocol FROM span WHERE trace_id=$1 LIMIT $2 OFFSET $3"
-	GetMetadataMapQueryUsingDuration  = "SELECT md.source, md.destination, COUNT(DISTINCT(trace_id)) AS trace_count,  ARRAY_AGG(DISTINCT(protocol)) protocol_list FROM (SELECT trace_id AS trace_id FROM scenario_trace WHERE created_at >= $1) AS st INNER JOIN (SELECT trace_id, protocol, source, destination FROM span WHERE workload_id_list IS NOT NULL) AS md USING(trace_id) GROUP BY md.source, md.destination LIMIT $2 OFFSET $3"
+	GetIssueDetailsList               = "SELECT issue.issue_id, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) as first_seen, max(time) as last_seen, ARRAY_AGG(DISTINCT(incident.trace_id)) incidents FROM (select trace_id, source, destination, time from span where workload_id_list is not null and source = ANY($1) and destination = ANY($2)) as s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_id) GROUP BY issue.issue_id, issue.issue_title, source, destination, scenario_id, scenario_version LIMIT $3 OFFSET $4"
+	GetIssueDetailsByIssueId          = "SELECT issue.issue_id, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) AS first_seen, max(time) AS last_seen, ARRAY_AGG(DISTINCT(incident.trace_id)) incidents FROM (select * from issue WHERE issue_id=$1) as issue INNER JOIN incident USING(issue_id) INNER JOIN (SELECT trace_id, source, destination, time FROM span WHERE workload_id_list IS NOT NULL) AS s USING(trace_id) GROUP BY issue.issue_id, issue.issue_title, source, destination, scenario_id, scenario_version"
+	GetTraceQuery                     = "SELECT trace_id, issue_id, incident_collection_time from incident where issue_id=$1 LIMIT $2 OFFSET $3"
+	GetSpanRawDataQuery               = "SELECT span.trace_id, span.span_id, request_payload, response_payload, protocol FROM span_raw_data INNER JOIN span USING(span_id) WHERE span.trace_id=$1 AND span.span_id=$2 LIMIT $3 OFFSET $4"
+	GetSpanQueryUsingTraceIdAndSpanId = "SELECT trace_id, span_id, source, destination, metadata, latency_ms, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND span_id=$2 LIMIT $3 OFFSET $4"
+	GetSpanQueryUsingTraceId          = "SELECT trace_id, span_id, source, destination, metadata, latency_ms, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 LIMIT $2 OFFSET $3"
 )
 
 var LogTag = "zk_trace_persistence_repo"
 
 type TracePersistenceRepo interface {
-	GetIncidentData(errorType, source string, offset, limit int) ([]dto.IncidentDto, error)
-	GetTraces(scenarioId string, offset, limit int) ([]dto.ScenarioTableDto, error)
-	GetSpan(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error)
-	GetSpanRawData(traceId, spanId string, offset, limit int) ([]dto.SpanRawDataTableDto, error)
-	GetMetadataMap(st string, offset, limit int) ([]dto.MetadataMapDto, error)
+	IssueListDetailsRepo(sources, destinations pq.StringArray, offset, limit int) ([]dto.IssueDetailsDto, error)
+	GetIssueDetails(issueId string) (dto.IssueDetailsDto, error)
+	GetTraces(issueId string, offset, limit int) ([]dto.IncidentTableDto, error)
+	GetSpans(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error)
+	GetSpanRawData(traceId, spanId string, offset, limit int) ([]dto.SpanRawDataDetailsDto, error)
 }
 
 type tracePersistenceRepo struct {
@@ -60,51 +36,64 @@ func NewTracePersistenceRepo(dbRepo sqlDB.DatabaseRepo) TracePersistenceRepo {
 	return &tracePersistenceRepo{dbRepo: dbRepo}
 }
 
-func (z tracePersistenceRepo) GetIncidentData(scenarioType, source string, offset, limit int) ([]dto.IncidentDto, error) {
-	rows, err, closeRow := z.dbRepo.GetAll(GetIncidentData, []any{scenarioType, source, limit, offset})
+func (z tracePersistenceRepo) IssueListDetailsRepo(sources, destinations pq.StringArray, offset, limit int) ([]dto.IssueDetailsDto, error) {
+	rows, err, closeRow := z.dbRepo.GetAll(GetIssueDetailsList, []any{sources, destinations, limit, offset})
 	defer closeRow()
 	if err != nil || rows == nil {
 		zkLogger.Error(LogTag, err)
 		return nil, err
 	}
 
-	var responseArr []dto.IncidentDto
+	var data []dto.IssueDetailsDto
 	for rows.Next() {
-		var rawData dto.IncidentDto
-		err := rows.Scan(&rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Title, &rawData.TotalCount,
-			&rawData.Destination, &rawData.FirstSeen, &rawData.LastSeen)
+		var rawData dto.IssueDetailsDto
+		err := rows.Scan(&rawData.IssueId, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
-			log.Fatal(err)
+			zkLogger.Error(LogTag, err)
 		}
 
-		rawData.ScenarioType = scenarioType
-		rawData.Source = source
-
-		last, err := utils.ParseTimestamp(rawData.LastSeen)
-		if err != nil {
-			zkLogger.Error(LogTag, "unable to parse last seen:", rawData.LastSeen, ", err:", err)
-			rawData.Velocity = -1
-			continue
-		}
-
-		first, err := utils.ParseTimestamp(rawData.FirstSeen)
-		if err != nil {
-			zkLogger.Error(LogTag, "unable to parse first seen:", rawData.FirstSeen, ", err:", err)
-			rawData.Velocity = -1
-			continue
-		}
-
-		days := utils.CalendarDaysBetween(first, last) + 1
+		days := utils.CalendarDaysBetween(rawData.FirstSeen, rawData.LastSeen) + 1
 		rawData.Velocity = float32(rawData.TotalCount / days)
-		responseArr = append(responseArr, rawData)
+		data = append(data, rawData)
 	}
 
-	return responseArr, nil
+	return data, nil
 
 }
 
-func (z tracePersistenceRepo) GetTraces(scenarioId string, offset, limit int) ([]dto.ScenarioTableDto, error) {
-	rows, err, closeRow := z.dbRepo.GetAll(GetTraceQuery, []any{scenarioId, limit, offset})
+func (z tracePersistenceRepo) GetIssueDetails(issueId string) (dto.IssueDetailsDto, error) {
+	rows, err, closeRow := z.dbRepo.GetAll(GetIssueDetailsByIssueId, []any{issueId})
+	var res dto.IssueDetailsDto
+	defer closeRow()
+	if err != nil || rows == nil {
+		zkLogger.Error(LogTag, err)
+		return res, err
+	}
+
+	var data []dto.IssueDetailsDto
+	for rows.Next() {
+		var rawData dto.IssueDetailsDto
+		err := rows.Scan(&rawData.IssueId, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
+		if err != nil {
+			zkLogger.Error(LogTag, err)
+		}
+
+		days := utils.CalendarDaysBetween(rawData.FirstSeen, rawData.LastSeen) + 1
+		rawData.Velocity = float32(rawData.TotalCount / days)
+		data = append(data, rawData)
+	}
+
+	if len(data) > 0 {
+		res = data[0]
+		zkLogger.Error(LogTag, "more than 1 row returned for issue id ", issueId)
+		zkLogger.Error(LogTag, "total rows returned = ", len(data))
+	}
+
+	return res, nil
+}
+
+func (z tracePersistenceRepo) GetTraces(issueId string, offset, limit int) ([]dto.IncidentTableDto, error) {
+	rows, err, closeRow := z.dbRepo.GetAll(GetTraceQuery, []any{issueId, limit, offset})
 	defer closeRow()
 
 	if err != nil || rows == nil {
@@ -112,14 +101,13 @@ func (z tracePersistenceRepo) GetTraces(scenarioId string, offset, limit int) ([
 		return nil, err
 	}
 
-	var responseArr []dto.ScenarioTableDto
+	var responseArr []dto.IncidentTableDto
 	for rows.Next() {
-		var rawData dto.ScenarioTableDto
-		err := rows.Scan(&rawData.ScenarioVersion, &rawData.TraceId)
+		var rawData dto.IncidentTableDto
+		err := rows.Scan(&rawData.TraceId, &rawData.IssueId, &rawData.IncidentCollectionTime)
 		if err != nil {
-			log.Fatal(err)
+			zkLogger.Error(LogTag, err)
 		}
-		rawData.ScenarioId = scenarioId
 
 		responseArr = append(responseArr, rawData)
 	}
@@ -127,7 +115,7 @@ func (z tracePersistenceRepo) GetTraces(scenarioId string, offset, limit int) ([
 	return responseArr, nil
 }
 
-func (z tracePersistenceRepo) GetSpan(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error) {
+func (z tracePersistenceRepo) GetSpans(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error) {
 	var query string
 	var params []any
 	if zkCommon.IsEmpty(spanId) {
@@ -149,9 +137,10 @@ func (z tracePersistenceRepo) GetSpan(traceId, spanId string, offset, limit int)
 	var responseArr []dto.SpanTableDto
 	for rows.Next() {
 		var rawData dto.SpanTableDto
-		err := rows.Scan(&rawData.SpanId, &rawData.ParentSpanId, &rawData.Source, &rawData.Destination, &rawData.WorkloadIdList, &rawData.Metadata, &rawData.LatencyMs, &rawData.Protocol)
+		err := rows.Scan(&rawData.TraceId, &rawData.SpanId, &rawData.Source, &rawData.Destination, &rawData.Metadata, &rawData.LatencyMs, &rawData.Protocol, &rawData.Status, &rawData.ParentSpanId, &rawData.WorkloadIdList, &rawData.Time)
 		if err != nil {
-			log.Fatal(err)
+			zkLogger.Error(LogTag, err)
+			return nil, err
 		}
 
 		rawData.TraceId = traceId
@@ -161,7 +150,7 @@ func (z tracePersistenceRepo) GetSpan(traceId, spanId string, offset, limit int)
 	return responseArr, nil
 }
 
-func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string, offset, limit int) ([]dto.SpanRawDataTableDto, error) {
+func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string, offset, limit int) ([]dto.SpanRawDataDetailsDto, error) {
 	rows, err, closeRow := z.dbRepo.GetAll(GetSpanRawDataQuery, []any{traceId, spanId, limit, offset})
 	defer closeRow()
 
@@ -170,41 +159,15 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string, offset, lim
 		return nil, err
 	}
 
-	var responseArr []dto.SpanRawDataTableDto
+	var data []dto.SpanRawDataDetailsDto
 	for rows.Next() {
-		var rawData dto.SpanRawDataTableDto
-		err := rows.Scan(&rawData.RequestPayload, &rawData.ResponsePayload)
+		var rawData dto.SpanRawDataDetailsDto
+		err := rows.Scan(&rawData.TraceId, &rawData.SpanId, &rawData.RequestPayload, &rawData.ResponsePayload, &rawData.Protocol)
 		if err != nil {
-			log.Fatal(err)
+			zkLogger.Error(LogTag, err)
 		}
-		rawData.TraceId = traceId
-		rawData.SpanId = spanId
-		responseArr = append(responseArr, rawData)
+		data = append(data, rawData)
 	}
 
-	return responseArr, nil
-}
-
-func (z tracePersistenceRepo) GetMetadataMap(st string, offset, limit int) ([]dto.MetadataMapDto, error) {
-	twoMinutesAgo := time.Now().Add(-40000 * time.Minute)
-	rows, err, closeRow := z.dbRepo.GetAll(GetMetadataMapQueryUsingDuration, []any{twoMinutesAgo, limit, offset})
-	defer closeRow()
-
-	if err != nil || rows == nil {
-		zkLogger.Error(LogTag, err)
-		return nil, err
-	}
-
-	var responseArr []dto.MetadataMapDto
-	for rows.Next() {
-		var rawData dto.MetadataMapDto
-		err := rows.Scan(&rawData.Source, &rawData.Destination, &rawData.TraceCount, &rawData.ProtocolList)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		responseArr = append(responseArr, rawData)
-	}
-
-	return responseArr, nil
+	return data, nil
 }

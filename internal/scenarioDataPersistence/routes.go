@@ -7,12 +7,12 @@ import (
 
 func Initialize(app router.Party, tph handler.TracePersistenceHandler) {
 
-	ruleEngineAPI := app.Party("/c/trace")
+	ruleEngineAPI := app.Party("/c/issue")
 	{
-		ruleEngineAPI.Get("/incident", tph.GetIncidents)
-		ruleEngineAPI.Get("/", tph.GetTraces)
-		ruleEngineAPI.Get("/metadata", tph.GetSpan)
-		ruleEngineAPI.Get("/raw-data", tph.GetSpanRawData)
-		ruleEngineAPI.Get("/metadata/map", tph.GetMetadataMapData)
+		ruleEngineAPI.Get("/", tph.GetIssuesListWithDetailsHandler)
+		ruleEngineAPI.Get("/{issueId}", tph.GetIssueDetailsHandler)
+		ruleEngineAPI.Get("/{issueId}/incident", tph.GetIncidentListHandler)
+		ruleEngineAPI.Get("/{issueId}/incident/{incidentId}", tph.GetIncidentDetailsHandler)
+		ruleEngineAPI.Get("/{issueId}/incident/{incidentId}/span/{spanId}", tph.GetSpanRawDataHandler)
 	}
 }

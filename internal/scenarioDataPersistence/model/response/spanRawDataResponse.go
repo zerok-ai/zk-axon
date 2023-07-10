@@ -7,17 +7,18 @@ import (
 )
 
 type SpanRawDataResponse struct {
-	Spans SpansRawDataDetailsMap `json:"spans"`
+	Spans SpansRawDataDetailsMap `json:"span_raw_data_details"`
 }
 
 type SpansRawDataDetailsMap map[string]SpanRawDataDetails
 
 type SpanRawDataDetails struct {
+	Protocol        string `json:"protocol"`
 	RequestPayload  string `json:"request_payload"`
 	ResponsePayload string `json:"response_payload"`
 }
 
-func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataTableDto) (*SpanRawDataResponse, *error) {
+func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (*SpanRawDataResponse, *error) {
 	respMap := make(map[string]SpanRawDataDetails, 0)
 	for _, v := range t {
 		reqDecompressedStr, err := crypto.DecompressStringGzip(v.RequestPayload)
@@ -32,6 +33,7 @@ func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataTableDto) (*Span
 		}
 
 		s := SpanRawDataDetails{
+			Protocol:        v.Protocol,
 			RequestPayload:  reqDecompressedStr,
 			ResponsePayload: resDecompressedStr,
 		}

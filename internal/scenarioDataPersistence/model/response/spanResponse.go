@@ -3,42 +3,49 @@ package scenariodataresponse
 import (
 	"axon/internal/scenarioDataPersistence/model/dto"
 	"github.com/lib/pq"
+	"time"
 )
 
-type SpansMetadataDetailsMap map[string]SpanDetails
-
-type SpanResponse struct {
+type IncidentDetailsResponse struct {
 	Spans SpansMetadataDetailsMap `json:"spans"`
 }
 
+type SpansMetadataDetailsMap map[string]SpanDetails
+
 type SpanDetails struct {
-	ParentSpanId   string         `json:"parent_span_id"`
 	Source         string         `json:"source"`
 	Destination    string         `json:"destination"`
-	WorkloadIdList pq.StringArray `json:"workload_id_list"`
+	Error          bool           `json:"error"`
 	Metadata       string         `json:"metadata,omitempty"`
 	LatencyMs      float32        `json:"latency_ms"`
 	Protocol       string         `json:"protocol"`
+	Status         string         `json:"status"`
+	ParentSpanId   string         `json:"parent_span_id"`
+	WorkloadIdList pq.StringArray `json:"workload_id_list"`
+	Time           *time.Time     `json:"time"`
 }
 
-func ConvertSpanToSpanResponse(t []dto.SpanTableDto) (*SpanResponse, *error) {
+func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) (*IncidentDetailsResponse, *error) {
 	respMap := make(map[string]SpanDetails, 0)
 	for _, v := range t {
 
 		s := SpanDetails{
-			ParentSpanId:   v.ParentSpanId,
 			Source:         v.Source,
 			Destination:    v.Destination,
-			WorkloadIdList: v.WorkloadIdList,
+			Error:          v.WorkloadIdList != nil || len(v.WorkloadIdList) != 0,
 			Metadata:       v.Metadata,
 			LatencyMs:      v.LatencyMs,
 			Protocol:       v.Protocol,
+			Status:         v.Status,
+			ParentSpanId:   v.ParentSpanId,
+			WorkloadIdList: v.WorkloadIdList,
+			Time:           v.Time,
 		}
 
 		respMap[v.SpanId] = s
 	}
 
-	resp := SpanResponse{Spans: respMap}
+	resp := IncidentDetailsResponse{Spans: respMap}
 
 	return &resp, nil
 }

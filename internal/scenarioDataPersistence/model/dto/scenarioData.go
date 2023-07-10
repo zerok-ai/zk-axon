@@ -5,28 +5,10 @@ import (
 	"time"
 )
 
-var LogTag = "trace_dto"
-
-type IncidentDto struct {
-	ScenarioId      string  `json:"scenario_id"`
-	ScenarioVersion string  `json:"scenario_version"`
-	Title           string  `json:"title"`
-	ScenarioType    string  `json:"scenario_type"`
-	Velocity        float32 `json:"velocity"`
-	TotalCount      int     `json:"total_count"`
-	Source          string  `json:"source"`
-	Destination     string  `json:"destination"`
-	FirstSeen       string  `json:"first_seen"`
-	LastSeen        string  `json:"last_seen"`
-}
-
-type ScenarioTableDto struct {
-	ScenarioId      string    `json:"scenario_id"`
-	ScenarioVersion string    `json:"scenario_version"`
-	TraceId         string    `json:"trace_id"`
-	ScenarioTitle   string    `json:"scenario_title"`
-	ScenarioType    string    `json:"scenario_type"`
-	CreatedAt       time.Time `json:"created_at"`
+type IncidentTableDto struct {
+	TraceId                string    `json:"trace_id"`
+	IssueId                string    `json:"issue_id"`
+	IncidentCollectionTime time.Time `json:"incident_collection_time"`
 }
 
 type SpanTableDto struct {
@@ -36,21 +18,31 @@ type SpanTableDto struct {
 	Source         string         `json:"source"`
 	Destination    string         `json:"destination"`
 	WorkloadIdList pq.StringArray `json:"workload_id_list"`
+	Status         string         `json:"status"`
 	Metadata       string         `json:"metadata"`
 	LatencyMs      float32        `json:"latency_ms"`
 	Protocol       string         `json:"protocol"`
+	Time           *time.Time     `json:"time"`
 }
 
-type SpanRawDataTableDto struct {
+type IssueDetailsDto struct {
+	IssueId         string         `json:"issue_id"`
+	IssueTitle      string         `json:"issue_title"`
+	ScenarioId      string         `json:"scenario_id"`
+	ScenarioVersion string         `json:"scenario_version"`
+	Source          string         `json:"source"`
+	Destination     string         `json:"destination"`
+	TotalCount      int            `json:"total_count"`
+	Velocity        float32        `json:"velocity"`
+	FirstSeen       time.Time      `json:"first_seen"`
+	LastSeen        time.Time      `json:"last_seen"`
+	Incidents       pq.StringArray `json:"incidents"`
+}
+
+type SpanRawDataDetailsDto struct {
 	TraceId         string `json:"trace_id"`
 	SpanId          string `json:"span_id"`
+	Protocol        string `json:"protocol"`
 	RequestPayload  []byte `json:"request_payload"`
 	ResponsePayload []byte `json:"response_payload"`
-}
-
-type MetadataMapDto struct {
-	Source       string         `json:"source"`
-	Destination  string         `json:"destination"`
-	TraceCount   int            `json:"trace_count"`
-	ProtocolList pq.StringArray `json:"protocol_list"`
 }
