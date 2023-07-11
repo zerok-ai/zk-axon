@@ -40,17 +40,11 @@ spec:
               port: 80
             successThreshold: 3
           env: # Setting Enviornmental Variables
-            - name: PL_POSTGRES_USERNAME  # Setting Database username from Secret
-              valueFrom:
-                secretKeyRef:
-                  name: pl-db-secrets
-                  key: PL_POSTGRES_USERNAME
-
             - name: PL_POSTGRES_PASSWORD # Setting Database password from Secret
               valueFrom:
                 secretKeyRef:
-                  name: pl-db-secrets
-                  key: PL_POSTGRES_PASSWORD
+                  name: postgres-postgresql
+                  key: postgres-password
 
 ---
 apiVersion: v1
@@ -70,7 +64,7 @@ data:
     postgres:
       host: postgres-postgresql.zk-client.svc.cluster.local
       port: 5432
-      user: "pl"
+      user: "postgres"
       password: "pl"
       dbname: "pl"
       max_connections: 5

@@ -1,9 +1,7 @@
 resources:
-  - pl-db-secrets.yaml
   - namespace.yaml
   - deployment.yaml
   - service.yaml
-  - axon-ingress.yaml
 namespace: zk-client
 commonLabels:
   app: zk-axon

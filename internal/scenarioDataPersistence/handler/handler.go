@@ -63,7 +63,7 @@ func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 	issueId := ctx.Params().Get(utils.IssueId)
 
 	if zkCommon.IsEmpty(issueId) {
-		zkLogger.Error(LogTag, "IssueId is empty in GetIssueDetailsHandler api")
+		zkLogger.Error(LogTag, "IssueHash is empty in GetIssueDetailsHandler api")
 		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestIssueIdEmpty, nil)
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
 		zkHttpResponse := z.WithZkErrorType(zkErr.Error).Build()

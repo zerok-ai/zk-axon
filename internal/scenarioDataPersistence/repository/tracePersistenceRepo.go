@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	GetIssueDetailsList               = "SELECT issue.issue_id, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) as first_seen, max(time) as last_seen, ARRAY_AGG(DISTINCT(incident.trace_id)) incidents FROM (select trace_id, source, destination, time from span where workload_id_list is not null and source = ANY($1) and destination = ANY($2)) as s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_id) GROUP BY issue.issue_id, issue.issue_title, source, destination, scenario_id, scenario_version LIMIT $3 OFFSET $4"
-	GetIssueDetailsByIssueId          = "SELECT issue.issue_id, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) AS first_seen, max(time) AS last_seen, ARRAY_AGG(DISTINCT(incident.trace_id)) incidents FROM (select * from issue WHERE issue_id=$1) as issue INNER JOIN incident USING(issue_id) INNER JOIN (SELECT trace_id, source, destination, time FROM span WHERE workload_id_list IS NOT NULL) AS s USING(trace_id) GROUP BY issue.issue_id, issue.issue_title, source, destination, scenario_id, scenario_version"
-	GetTraceQuery                     = "SELECT trace_id, issue_id, incident_collection_time from incident where issue_id=$1 LIMIT $2 OFFSET $3"
+	GetIssueDetailsList               = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) as first_seen, max(time) as last_seen, ARRAY_AGG(DISTINCT(incident.trace_id)) incidents FROM (select trace_id, source, destination, time from span where workload_id_list is not null and source = ANY($1) and destination = ANY($2)) as s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) GROUP BY issue.issue_hash, issue.issue_title, source, destination, scenario_id, scenario_version LIMIT $3 OFFSET $4"
+	GetIssueDetailsByIssueId          = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) AS first_seen, max(time) AS last_seen, ARRAY_AGG(DISTINCT(incident.trace_id)) incidents FROM (select * from issue WHERE issue_hash=$1) as issue INNER JOIN incident USING(issue_hash) INNER JOIN (SELECT trace_id, source, destination, time FROM span WHERE workload_id_list IS NOT NULL) AS s USING(trace_id) GROUP BY issue.issue_hash, issue.issue_title, source, destination, scenario_id, scenario_version"
+	GetTraceQuery                     = "SELECT trace_id, issue_hash, incident_collection_time from incident where issue_hash=$1 LIMIT $2 OFFSET $3"
 	GetSpanRawDataQuery               = "SELECT span.trace_id, span.span_id, request_payload, response_payload, protocol FROM span_raw_data INNER JOIN span USING(span_id) WHERE span.trace_id=$1 AND span.span_id=$2 LIMIT $3 OFFSET $4"
 	GetSpanQueryUsingTraceIdAndSpanId = "SELECT trace_id, span_id, source, destination, metadata, latency_ms, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND span_id=$2 LIMIT $3 OFFSET $4"
-	GetSpanQueryUsingTraceId          = "SELECT trace_id, span_id, source, destination, metadata, latency_ms, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 LIMIT $2 OFFSET $3"
+	GetSpanQueryUsingTraceId          = "SELECT trace_id, span_id, source, destination, metadata, latency_ms, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND workload_id_list is not NULL LIMIT $2 OFFSET $3"
 )
 
 var LogTag = "zk_trace_persistence_repo"
@@ -47,7 +47,7 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(sources, destinations pq.Stri
 	var data []dto.IssueDetailsDto
 	for rows.Next() {
 		var rawData dto.IssueDetailsDto
-		err := rows.Scan(&rawData.IssueId, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
+		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			zkLogger.Error(LogTag, err)
 		}
@@ -73,7 +73,7 @@ func (z tracePersistenceRepo) GetIssueDetails(issueId string) (dto.IssueDetailsD
 	var data []dto.IssueDetailsDto
 	for rows.Next() {
 		var rawData dto.IssueDetailsDto
-		err := rows.Scan(&rawData.IssueId, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
+		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			zkLogger.Error(LogTag, err)
 		}
@@ -104,7 +104,7 @@ func (z tracePersistenceRepo) GetTraces(issueId string, offset, limit int) ([]dt
 	var responseArr []dto.IncidentTableDto
 	for rows.Next() {
 		var rawData dto.IncidentTableDto
-		err := rows.Scan(&rawData.TraceId, &rawData.IssueId, &rawData.IncidentCollectionTime)
+		err := rows.Scan(&rawData.TraceId, &rawData.IssueHash, &rawData.IncidentCollectionTime)
 		if err != nil {
 			zkLogger.Error(LogTag, err)
 		}
