@@ -2,6 +2,7 @@ resources:
   - namespace.yaml
   - deployment.yaml
   - service.yaml
+  - configmap.yaml
 namespace: zk-client
 commonLabels:
   app: zk-axon
