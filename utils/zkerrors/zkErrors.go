@@ -6,9 +6,8 @@ import (
 )
 
 var (
-	ZkErrorBadRequestIssueIdEmpty     = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "IssueHash cannot be empty"}
-	ZkErrorBadRequestTraceIdIdEmpty   = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "TraceId cannot be empty"}
-	ZkErrorBadRequestSpanIdEmpty      = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "SpanId cannot be empty"}
-	ZkErrorBadRequestSourceEmpty      = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "Source cannot be empty"}
-	ZkErrorBadRequestDestinationEmpty = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "Destination cannot be empty"}
+	ZkErrorBadRequestIssueIdEmpty   = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "IssueHash cannot be empty"}
+	ZkErrorBadRequestTraceIdIdEmpty = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "TraceId cannot be empty"}
+	ZkErrorBadRequestSpanIdEmpty    = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "SpanId cannot be empty"}
+	//ZkErrorBadRequestScenarioIdEmpty = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "ScenarioId cannot be empty"}
 )

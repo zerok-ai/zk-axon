@@ -4,7 +4,6 @@ import (
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/repository"
 	"fmt"
-	"github.com/lib/pq"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strings"
@@ -13,11 +12,12 @@ import (
 var LogTag = "zk_trace_persistence_service"
 
 type TracePersistenceService interface {
-	GetIssueListWithDetailsService(source, destination string, offset, limit int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
+	GetIssueListWithDetailsService(services string, offset, limit int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
 	GetIssueDetailsService(issueId string) (traceResponse.IssueWithDetailsResponse, *zkErrors.ZkError)
 	GetIncidentListService(issueId string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
 	GetSpanRawDataService(traceId, spanId string, offset, limit int) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
+	//GetScenariosAllTracesDataService(scenarioId string, offset, limit int) (traceResponse.ScenarioIncidentDetailsResponse, *zkErrors.ZkError)
 }
 
 func NewScenarioPersistenceService(repo repository.TracePersistenceRepo) TracePersistenceService {
@@ -28,21 +28,14 @@ type tracePersistenceService struct {
 	repo repository.TracePersistenceRepo
 }
 
-func (s tracePersistenceService) GetIssueListWithDetailsService(sources, destinations string, offset, limit int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
+func (s tracePersistenceService) GetIssueListWithDetailsService(services string, offset, limit int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IssueListWithDetailsResponse
 
-	sourceList := strings.Split(sources, ",")
-	if sourceList == nil || len(sourceList) == 0 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, "source is empty")
-		zkLogger.Error(LogTag, zkErr, sourceList)
-		return response, &zkErr
-	}
-
-	destinationList := strings.Split(destinations, ",")
-	if destinationList == nil || len(destinationList) == 0 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, "destination is empty")
-		zkLogger.Error(LogTag, zkErr, destinationList)
-		return response, &zkErr
+	var serviceList []string
+	if serviceList == nil || len(serviceList) == 0 {
+		zkLogger.Info(LogTag, "service list is empty")
+	} else {
+		serviceList = strings.Split(services, ",")
 	}
 
 	if offset < 0 || limit < 1 {
@@ -50,10 +43,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(sources, destina
 		return response, &zkErr
 	}
 
-	x := pq.StringArray(sourceList)
-	y := pq.StringArray(destinationList)
-
-	data, err := s.repo.IssueListDetailsRepo(x, y, offset, limit)
+	data, err := s.repo.IssueListDetailsRepo(serviceList, offset, limit)
 	if err == nil {
 		response := traceResponse.ConvertIssueListDetailsDtoToIssueListDetailsResponse(data)
 		return *response, nil
@@ -134,3 +124,22 @@ func (s tracePersistenceService) GetSpanRawDataService(traceId, spanId string, o
 	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
 	return response, &zkErr
 }
+
+//func (s tracePersistenceService) GetScenariosAllTracesDataService(scenarioId string, offset, limit int) (traceResponse.ScenarioIncidentDetailsResponse, *zkErrors.ZkError) {
+//	var response traceResponse.ScenarioIncidentDetailsResponse
+//	//TODO: discuss if the below condition of limit > 100 is fine. or it should be read from some config
+//	threshold := 1000
+//	if offset < 0 || limit < 1 || limit > threshold {
+//		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, fmt.Sprintf("either offset or limit < 0 or limit > %d", threshold))
+//		return response, &zkErr
+//	}
+//
+//	data, err := s.repo.GetScenariosAllTracesDataService(scenarioId, offset, limit)
+//	if err == nil {
+//		response := traceResponse.ConvertScenarioIncidentDetailsDtoListToScenarioIncidentDetailsResponse(data)
+//		return response, nil
+//	}
+//
+//	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
+//	return response, &zkErr
+//}

@@ -9,13 +9,13 @@ const (
 	IssueId    = "issueId"
 	IncidentId = "incidentId"
 	SpanId     = "spanId"
+	//Scenario   = "scenarioId"
 
 	// Query Params
-	SpanIdQueryParam      = "span_id"
-	SourceQueryParam      = "source"
-	DestinationQueryParam = "destination"
-	LimitQueryParam       = "limit"
-	OffsetQueryParam      = "offset"
+	SpanIdQueryParam   = "span_id"
+	ServicesQueryParam = "services"
+	LimitQueryParam    = "limit"
+	OffsetQueryParam   = "offset"
 )
 
 func CalendarDaysBetween(start, end time.Time) int {

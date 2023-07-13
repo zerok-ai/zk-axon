@@ -20,6 +20,7 @@ type TracePersistenceHandler interface {
 	GetIncidentListHandler(ctx iris.Context)
 	GetIncidentDetailsHandler(ctx iris.Context)
 	GetSpanRawDataHandler(ctx iris.Context)
+	//GetAllScenariosTracesData(ctx iris.Context)
 }
 
 var LogTag = "trace_persistence_handler"
@@ -35,12 +36,11 @@ func NewTracePersistenceHandler(persistenceService service.TracePersistenceServi
 }
 
 func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Context) {
-	source := ctx.URLParam(utils.SourceQueryParam)
-	destination := ctx.URLParam(utils.DestinationQueryParam)
+	services := ctx.URLParam(utils.ServicesQueryParam)
 	limit := ctx.URLParamDefault(utils.LimitQueryParam, "50")
 	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
 
-	if err := validation.GetIssuesListWithDetails(source, destination, offset, limit); err != nil {
+	if err := validation.GetIssuesListWithDetails(offset, limit); err != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIssuesListWithDetailsHandler: ", err)
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
 		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
@@ -52,7 +52,7 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 	l, _ := strconv.Atoi(limit)
 	o, _ := strconv.Atoi(offset)
 
-	resp, err := t.service.GetIssueListWithDetailsService(source, destination, o, l)
+	resp, err := t.service.GetIssueListWithDetailsService(services, o, l)
 
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueListWithDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
@@ -151,3 +151,26 @@ func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 }
+
+//func (t tracePersistenceHandler) GetAllScenariosTracesData(ctx iris.Context) {
+//	scenarioId := ctx.Params().Get(utils.Scenario)
+//	limit := ctx.URLParamDefault(utils.LimitQueryParam, "1000")
+//	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
+//	if err := validation.ValidateGetScenariosAllTraceDataApi(scenarioId, offset, limit); err != nil {
+//		zkLogger.Error(LogTag, "Error while validating GetAllScenariosTracesData api", err)
+//		z := &zkHttp.ZkHttpResponseBuilder[any]{}
+//		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
+//		ctx.StatusCode(zkHttpResponse.Status)
+//		ctx.JSON(zkHttpResponse)
+//		return
+//	}
+//
+//	l, _ := strconv.Atoi(limit)
+//	o, _ := strconv.Atoi(offset)
+//
+//	resp, err := t.service.GetScenariosAllTracesDataService(scenarioId, o, l)
+//
+//	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.ScenarioIncidentDetailsResponse](200, resp, resp, err)
+//	ctx.StatusCode(zkHttpResponse.Status)
+//	ctx.JSON(zkHttpResponse)
+//}
