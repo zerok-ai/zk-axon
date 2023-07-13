@@ -45,31 +45,3 @@ spec:
                 secretKeyRef:
                   name: postgres-postgresql
                   key: postgres-password
-
----
-apiVersion: v1
-data:
-  config.yaml: |+
-    server:
-      host: localhost
-      port: 80
-    
-    logs:
-      color: true
-      level: DEBUG
-    
-    http:
-      debug: true
-    
-    postgres:
-      host: postgres-postgresql.zk-client.svc.cluster.local
-      port: 5432
-      user: "postgres"
-      password: "pl"
-      dbname: "pl"
-      max_connections: 5
-      max_idle_connections: 5
-      connection_max_lifetime_in_minutes: 10
-kind: ConfigMap
-metadata:
-  name: zk-axon
