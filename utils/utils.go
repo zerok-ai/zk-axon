@@ -25,3 +25,9 @@ func CalendarDaysBetween(start, end time.Time) int {
 	days := int(duration.Hours() / 24)
 	return days
 }
+
+func HoursBetween(start, end time.Time) int {
+	duration := end.Sub(start)
+	hours := int(duration.Hours())
+	return hours
+}

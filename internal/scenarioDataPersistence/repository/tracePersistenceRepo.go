@@ -65,8 +65,8 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, o
 			zkLogger.Error(LogTag, err)
 		}
 
-		days := utils.CalendarDaysBetween(rawData.FirstSeen, rawData.LastSeen) + 1
-		rawData.Velocity = float32(rawData.TotalCount / days)
+		hours := utils.HoursBetween(rawData.FirstSeen, rawData.LastSeen) + 1
+		rawData.Velocity = float32(rawData.TotalCount / hours)
 		data = append(data, rawData)
 	}
 
@@ -91,8 +91,8 @@ func (z tracePersistenceRepo) GetIssueDetails(issueId string) (dto.IssueDetailsD
 			zkLogger.Error(LogTag, err)
 		}
 
-		days := utils.CalendarDaysBetween(rawData.FirstSeen, rawData.LastSeen) + 1
-		rawData.Velocity = float32(rawData.TotalCount / days)
+		hours := utils.HoursBetween(rawData.FirstSeen, rawData.LastSeen) + 1
+		rawData.Velocity = float32(rawData.TotalCount / hours)
 		data = append(data, rawData)
 	}
 
