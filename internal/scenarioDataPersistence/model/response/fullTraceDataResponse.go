@@ -32,7 +32,7 @@ package scenariodataresponse
 //			Destination:     v.Destination,
 //			WorkloadIdList:  v.WorkloadIdList,
 //			Metadata:        v.Metadata,
-//			LatencyMs:       v.LatencyMs,
+//			LatencyNs:       v.LatencyNs,
 //			Protocol:        v.Protocol,
 //			RequestPayload:  HTTPRequestPayload{},
 //			ResponsePayload: HTTPResponsePayload{},
@@ -64,7 +64,7 @@ package scenariodataresponse
 //	Destination     string              `json:"destination"`
 //	WorkloadIdList  []string            `json:"workload_id_list"`
 //	Metadata        Metadata            `json:"metadata"`
-//	LatencyMs       float32             `json:"latency_ms"`
+//	LatencyNs       float32             `json:"latency_ns"`
 //	Protocol        string              `json:"protocol"`
 //	RequestPayload  HTTPRequestPayload  `json:"request_payload"`
 //	ResponsePayload HTTPResponsePayload `json:"response_payload"`

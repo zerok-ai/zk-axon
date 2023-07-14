@@ -20,7 +20,7 @@ type SpanTableDto struct {
 	WorkloadIdList pq.StringArray `json:"workload_id_list"`
 	Status         string         `json:"status"`
 	Metadata       string         `json:"metadata"`
-	LatencyMs      float32        `json:"latency_ms"`
+	LatencyNs      float32        `json:"latency_ns"`
 	Protocol       string         `json:"protocol"`
 	Time           *time.Time     `json:"time"`
 }
@@ -59,7 +59,7 @@ type SpanRawDataDetailsDto struct {
 //	WorkloadIdList         pq.StringArray                `json:"workload_id_list"`
 //	Status                 string                        `json:"status"`
 //	Metadata               scenariodataresponse.Metadata `json:"metadata"`
-//	LatencyMs              float32                       `json:"latency_ms"`
+//	LatencyNs              float32                       `json:"latency_ns"`
 //	Protocol               string                        `json:"protocol"`
 //	Time                   *time.Time                    `json:"time"`
 //	IssueHashList          pq.StringArray                `json:"issue_hash_list"`

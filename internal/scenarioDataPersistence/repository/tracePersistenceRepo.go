@@ -15,9 +15,9 @@ const (
 	GetIssueDetailsByIssueId              = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) AS first_seen, max(time) AS last_seen, ARRAY_AGG( DISTINCT(incident.trace_id) ) incidents FROM ( select * from issue WHERE issue_hash = $1 ) as issue INNER JOIN incident USING(issue_hash) INNER JOIN ( SELECT trace_id, issue_hash_list, source, destination, time FROM span WHERE issue_hash_list IS NOT NULL ) AS s USING(trace_id) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, source, destination, scenario_id, scenario_version"
 	GetTraceQuery                         = "SELECT trace_id, issue_hash, incident_collection_time from incident where issue_hash=$1 LIMIT $2 OFFSET $3"
 	GetSpanRawDataQuery                   = "SELECT span.trace_id, span.span_id, request_payload, response_payload, protocol FROM span_raw_data INNER JOIN span USING(span_id) WHERE span.trace_id=$1 AND span.span_id=$2 LIMIT $3 OFFSET $4"
-	GetSpanQueryUsingTraceIdAndSpanId     = "SELECT trace_id, span_id, source, destination, metadata, latency_ms, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND span_id=$2 LIMIT $3 OFFSET $4"
-	GetSpanQueryUsingTraceId              = "SELECT trace_id, span_id, source, destination, metadata, latency_ms, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND workload_id_list is not NULL LIMIT $2 OFFSET $3"
-	//GetScenariosAllIncidentDetailsByScenarioId = "select scenario_id, scenario_version, incident.trace_id, incident.incident_collection_time, span.span_id, parent_span_id, source, destination, workload_id_list, status, metadata, latency_ms, protocol, time, issue_hash_list, request_payload, response_payload from issue inner join incident using(issue_hash) inner join span using(trace_id) inner join span_raw_data using(trace_id) WHERE scenario_id=$1 LIMIT $2 OFFSET $3"
+	GetSpanQueryUsingTraceIdAndSpanId     = "SELECT trace_id, span_id, source, destination, metadata, latency_ns, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND span_id=$2 LIMIT $3 OFFSET $4"
+	GetSpanQueryUsingTraceId              = "SELECT trace_id, span_id, source, destination, metadata, latency_ns, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND workload_id_list is not NULL LIMIT $2 OFFSET $3"
+	//GetScenariosAllIncidentDetailsByScenarioId = "select scenario_id, scenario_version, incident.trace_id, incident.incident_collection_time, span.span_id, parent_span_id, source, destination, workload_id_list, status, metadata, latency_ns, protocol, time, issue_hash_list, request_payload, response_payload from issue inner join incident using(issue_hash) inner join span using(trace_id) inner join span_raw_data using(trace_id) WHERE scenario_id=$1 LIMIT $2 OFFSET $3"
 )
 
 var LogTag = "zk_trace_persistence_repo"
@@ -150,7 +150,7 @@ func (z tracePersistenceRepo) GetSpans(traceId, spanId string, offset, limit int
 	var responseArr []dto.SpanTableDto
 	for rows.Next() {
 		var rawData dto.SpanTableDto
-		err := rows.Scan(&rawData.TraceId, &rawData.SpanId, &rawData.Source, &rawData.Destination, &rawData.Metadata, &rawData.LatencyMs, &rawData.Protocol, &rawData.Status, &rawData.ParentSpanId, &rawData.WorkloadIdList, &rawData.Time)
+		err := rows.Scan(&rawData.TraceId, &rawData.SpanId, &rawData.Source, &rawData.Destination, &rawData.Metadata, &rawData.LatencyNs, &rawData.Protocol, &rawData.Status, &rawData.ParentSpanId, &rawData.WorkloadIdList, &rawData.Time)
 		if err != nil {
 			zkLogger.Error(LogTag, err)
 			return nil, err
@@ -199,7 +199,7 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string, offset, lim
 //		var rawData dto.ScenarioIncidentDetailsDto
 //		err := rows.Scan(&rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.TraceId, &rawData.IncidentCollectionTime,
 //			&rawData.SpanId, &rawData.ParentSpanId, &rawData.Source, &rawData.Destination, &rawData.WorkloadIdList,
-//			&rawData.Status, &rawData.Metadata, &rawData.LatencyMs, &rawData.Protocol, &rawData.Time,
+//			&rawData.Status, &rawData.Metadata, &rawData.LatencyNs, &rawData.Protocol, &rawData.Time,
 //			&rawData.IssueHashList, &rawData.RequestPayload, &rawData.ResponsePayload)
 //		if err != nil {
 //			zkLogger.Error(LogTag, err)

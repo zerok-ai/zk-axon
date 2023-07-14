@@ -17,7 +17,7 @@ type SpanDetails struct {
 	Destination    string         `json:"destination"`
 	Error          bool           `json:"error"`
 	Metadata       string         `json:"metadata,omitempty"`
-	LatencyMs      float32        `json:"latency_ms"`
+	LatencyNs      float32        `json:"latency_ns"`
 	Protocol       string         `json:"protocol"`
 	Status         string         `json:"status"`
 	ParentSpanId   string         `json:"parent_span_id"`
@@ -34,7 +34,7 @@ func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) (*IncidentDetail
 			Destination:    v.Destination,
 			Error:          v.WorkloadIdList != nil || len(v.WorkloadIdList) != 0,
 			Metadata:       v.Metadata,
-			LatencyMs:      v.LatencyMs,
+			LatencyNs:      v.LatencyNs,
 			Protocol:       v.Protocol,
 			Status:         v.Status,
 			ParentSpanId:   v.ParentSpanId,

@@ -7,6 +7,7 @@ import (
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strings"
+	"zk-rawdata-reader/vzReader/utils"
 )
 
 var LogTag = "zk_trace_persistence_service"
@@ -32,7 +33,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services string,
 	var response traceResponse.IssueListWithDetailsResponse
 
 	var serviceList []string
-	if serviceList == nil || len(serviceList) == 0 {
+	if utils.IsEmpty(services) {
 		zkLogger.Info(LogTag, "service list is empty")
 	} else {
 		serviceList = strings.Split(services, ",")

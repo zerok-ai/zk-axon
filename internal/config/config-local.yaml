@@ -12,8 +12,10 @@ http:
 postgres:
   host: "localhost"
   port: 5432
-  user: "postgres"
-  password: "dQsibXGVE3"
+#  user: "postgres"
+#  password: "dQsibXGVE3"
+  user: "pl"
+  password: "pl"
   dbname: "pl"
   max_connections: 5
   max_idle_connections: 5
