@@ -4,10 +4,10 @@ import (
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/repository"
 	"fmt"
+	utils "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strings"
-	"zk-rawdata-reader/vzReader/utils"
 )
 
 var LogTag = "zk_trace_persistence_service"
