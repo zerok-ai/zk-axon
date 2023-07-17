@@ -40,7 +40,7 @@ type IssueListWithDetailsResponse struct {
 
 func ConvertIssueListDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDto) *IssueListWithDetailsResponse {
 	var resp IssueListWithDetailsResponse
-	var issuesList []IssueDetails
+	issuesList := make([]IssueDetails, 0)
 
 	for _, v := range t {
 		r := ConvertIssueDetailsDtoToIssueDetails(v)
