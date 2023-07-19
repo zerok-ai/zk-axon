@@ -25,7 +25,7 @@ type SpanDetails struct {
 	Time           *time.Time     `json:"time"`
 }
 
-func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) (*IncidentDetailsResponse, *error) {
+func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetailsResponse {
 	respMap := make(map[string]SpanDetails, 0)
 	for _, v := range t {
 
@@ -47,5 +47,5 @@ func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) (*IncidentDetail
 
 	resp := IncidentDetailsResponse{Spans: respMap}
 
-	return &resp, nil
+	return &resp
 }

@@ -6,7 +6,7 @@ import (
 
 const (
 	// Path Params
-	IssueId    = "issueId"
+	IssueHash  = "issueHash"
 	IncidentId = "incidentId"
 	SpanId     = "spanId"
 	//Scenario   = "scenarioId"

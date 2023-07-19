@@ -23,12 +23,13 @@ func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (*Sp
 	for _, v := range t {
 		reqDecompressedStr, err := crypto.DecompressStringGzip(v.RequestPayload)
 		if err != nil {
+			zkLogger.Error(LogTag, "error decompressing request payload", err)
 			return nil, &err
 		}
 
 		resDecompressedStr, err := crypto.DecompressStringGzip(v.ResponsePayload)
 		if err != nil {
-			zkLogger.Error(LogTag, err)
+			zkLogger.Error(LogTag, "error decompressing response payload", err)
 			return nil, &err
 		}
 

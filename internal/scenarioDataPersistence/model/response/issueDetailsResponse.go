@@ -21,7 +21,7 @@ func ConvertIncidentTableDtoToIncidentListResponse(t []dto.IncidentTableDto) *In
 }
 
 type IssueDetails struct {
-	IssueId         string    `json:"issue_hash"`
+	IssueHash       string    `json:"issue_hash"`
 	IssueTitle      string    `json:"issue_title"`
 	ScenarioId      string    `json:"scenario_id"`
 	ScenarioVersion string    `json:"scenario_version"`
@@ -59,7 +59,7 @@ type IssueWithDetailsResponse struct {
 func ConvertIssueDetailsDtoToIssueDetails(v dto.IssueDetailsDto) IssueDetails {
 	var r IssueDetails
 
-	r.IssueId = v.IssueHash
+	r.IssueHash = v.IssueHash
 	r.IssueTitle = v.IssueTitle
 	r.ScenarioId = v.ScenarioId
 	r.ScenarioVersion = v.ScenarioVersion
