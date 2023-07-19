@@ -2,6 +2,7 @@ package scenariodataresponse
 
 import (
 	"axon/internal/scenarioDataPersistence/model/dto"
+	"axon/utils"
 	"time"
 )
 
@@ -25,8 +26,8 @@ type IssueDetails struct {
 	IssueTitle      string    `json:"issue_title"`
 	ScenarioId      string    `json:"scenario_id"`
 	ScenarioVersion string    `json:"scenario_version"`
-	Source          string    `json:"source"`
-	Destination     string    `json:"destination"`
+	Sources         []string  `json:"sources"`
+	Destinations    []string  `json:"destinations"`
 	TotalCount      int       `json:"total_count"`
 	Velocity        float32   `json:"velocity"`
 	FirstSeen       time.Time `json:"first_seen"`
@@ -58,15 +59,16 @@ type IssueWithDetailsResponse struct {
 
 func ConvertIssueDetailsDtoToIssueDetails(v dto.IssueDetailsDto) IssueDetails {
 	var r IssueDetails
+	hours := utils.HoursBetween(v.FirstSeen, v.LastSeen) + 1
 
 	r.IssueHash = v.IssueHash
 	r.IssueTitle = v.IssueTitle
 	r.ScenarioId = v.ScenarioId
 	r.ScenarioVersion = v.ScenarioVersion
-	r.Source = v.Source
-	r.Destination = v.Destination
+	r.Sources = v.Sources
+	r.Destinations = v.Destinations
 	r.TotalCount = v.TotalCount
-	r.Velocity = v.Velocity
+	r.Velocity = float32(v.TotalCount / hours)
 	r.FirstSeen = v.FirstSeen
 	r.LastSeen = v.LastSeen
 	if len(v.Incidents) >= 5 {
@@ -75,9 +77,17 @@ func ConvertIssueDetailsDtoToIssueDetails(v dto.IssueDetailsDto) IssueDetails {
 		r.Incidents = v.Incidents
 	}
 
-	return r
-}
+	if len(v.Sources) >= 5 {
+		r.Sources = v.Sources[:5]
+	} else {
+		r.Sources = v.Sources
+	}
 
-func ConvertIssueToIssueDetailsResponse(t dto.IssueDetailsDto) IssueWithDetailsResponse {
-	return IssueWithDetailsResponse{Issue: ConvertIssueDetailsDtoToIssueDetails(t)}
+	if len(v.Destinations) >= 5 {
+		r.Destinations = v.Destinations[:5]
+	} else {
+		r.Destinations = v.Destinations
+	}
+
+	return r
 }

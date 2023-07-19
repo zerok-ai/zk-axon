@@ -2,7 +2,6 @@ package repository
 
 import (
 	"axon/internal/scenarioDataPersistence/model/dto"
-	"axon/utils"
 	"fmt"
 	"github.com/lib/pq"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
@@ -12,9 +11,9 @@ import (
 )
 
 const (
-	GetIssueDetailsListWithoutServiceName = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) as first_seen, max(time) as last_seen, ARRAY_AGG( DISTINCT(incident.trace_id) ) incidents FROM ( select trace_id, source, issue_hash_list, destination, time from span where issue_hash_list is not null ) as s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, source, destination, scenario_id, scenario_version LIMIT $1 OFFSET $2"
-	GetIssueDetailsList                   = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) as first_seen, max(time) as last_seen, ARRAY_AGG( DISTINCT(incident.trace_id) ) incidents FROM ( select trace_id, source, issue_hash_list, destination, time from span where issue_hash_list is not null AND (source = ANY($1) OR destination = ANY($2)) ) as s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, source, destination, scenario_id, scenario_version LIMIT $3 OFFSET $4"
-	GetIssueDetailsByIssueHash            = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, source, destination, COUNT(*) AS total_count, min(time) AS first_seen, max(time) AS last_seen, ARRAY_AGG( DISTINCT(incident.trace_id) ) incidents FROM ( select * from issue WHERE issue_hash = $1 ) as issue INNER JOIN incident USING(issue_hash) INNER JOIN ( SELECT trace_id, issue_hash_list, source, destination, time FROM span WHERE issue_hash_list IS NOT NULL ) AS s USING(trace_id) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, source, destination, scenario_id, scenario_version"
+	GetIssueDetailsListWithoutServiceName = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG( DISTINCT(source) ) sources, ARRAY_AGG( DISTINCT(destination) ) destinations, COUNT(*) AS total_count, min(time) as first_seen, max(time) as last_seen, ARRAY_AGG( DISTINCT(incident.trace_id) ) incidents FROM ( select trace_id, source, issue_hash_list, destination, time from span where issue_hash_list is not null ) as s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version LIMIT $1 OFFSET $2"
+	GetIssueDetailsList                   = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG( DISTINCT(source) ) sources, ARRAY_AGG( DISTINCT(destination) ) destinations, COUNT(*) AS total_count, min(time) as first_seen, max(time) as last_seen, ARRAY_AGG( DISTINCT(incident.trace_id) ) incidents FROM ( select trace_id, source, issue_hash_list, destination, time from span where issue_hash_list is not null AND (source = ANY($1) OR destination = ANY($2)) ) as s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version LIMIT $3 OFFSET $4"
+	GetIssueDetailsByIssueHash            = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG( DISTINCT(source) ) sources, ARRAY_AGG( DISTINCT(destination) ) destinations, COUNT(*) AS total_count, min(time) AS first_seen, max(time) AS last_seen, ARRAY_AGG( DISTINCT(incident.trace_id) ) incidents FROM ( select * from issue WHERE issue_hash = $1 ) as issue INNER JOIN incident USING(issue_hash) INNER JOIN ( SELECT trace_id, issue_hash_list, source, destination, time FROM span WHERE issue_hash_list IS NOT NULL ) AS s USING(trace_id) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version"
 	GetTraceQuery                         = "SELECT trace_id, issue_hash, incident_collection_time from incident where issue_hash=$1 LIMIT $2 OFFSET $3"
 	GetSpanQueryUsingTraceId              = "SELECT trace_id, span_id, source, destination, metadata, latency_ns, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND workload_id_list is not NULL LIMIT $2 OFFSET $3"
 	GetSpanQueryUsingTraceIdAndSpanId     = "SELECT trace_id, span_id, source, destination, metadata, latency_ns, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND span_id=$2"
@@ -61,14 +60,12 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, o
 	data := make([]dto.IssueDetailsDto, 0)
 	for rows.Next() {
 		var rawData dto.IssueDetailsDto
-		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
+		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			s := strings.Join(serviceList, ",")
 			zkLogger.Error(LogTag, fmt.Sprintf("service_list: %s", s), err)
 		}
 
-		hours := utils.HoursBetween(rawData.FirstSeen, rawData.LastSeen) + 1
-		rawData.Velocity = float32(rawData.TotalCount / hours)
 		data = append(data, rawData)
 	}
 
@@ -87,14 +84,16 @@ func (z tracePersistenceRepo) GetIssueDetails(issueHash string) ([]dto.IssueDeta
 	data := make([]dto.IssueDetailsDto, 0)
 	for rows.Next() {
 		var rawData dto.IssueDetailsDto
-		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Source, &rawData.Destination, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
+		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("issue_hash: %s", issueHash), err)
 		}
 
-		hours := utils.HoursBetween(rawData.FirstSeen, rawData.LastSeen) + 1
-		rawData.Velocity = float32(rawData.TotalCount / hours)
 		data = append(data, rawData)
+	}
+
+	if len(data) > 1 {
+		zkLogger.Info(LogTag, fmt.Sprintf("issue_hash: %s", issueHash), "multiple rows found for issue hash")
 	}
 
 	return data, nil
