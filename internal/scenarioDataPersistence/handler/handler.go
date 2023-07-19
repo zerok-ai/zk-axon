@@ -5,9 +5,12 @@ import (
 	"axon/internal/scenarioDataPersistence/service"
 	"axon/internal/scenarioDataPersistence/validation"
 	"axon/utils"
+	zkErrorsScenarioManager "axon/utils/zkerrors"
 	"github.com/kataras/iris/v12"
+	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
+	"github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strconv"
 )
 
@@ -57,13 +60,12 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 
 func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 	issueHash := ctx.Params().Get(utils.IssueHash)
-	limit := ctx.URLParamDefault(utils.LimitQueryParam, "50")
-	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
 
-	if err := validation.ValidateIssueHashOffsetAndLimit(issueHash, offset, limit); err != nil {
-		zkLogger.Error(LogTag, "Error while validating GetIssueDetailsHandler: ", err)
+	if zkCommon.IsEmpty(issueHash) {
+		zkLogger.Error(LogTag, "IssueHash is empty in GetIssueDetailsHandler api")
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestIssueHashEmpty, nil)
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
-		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
+		zkHttpResponse := z.WithZkErrorType(zkErr.Error).Build()
 		ctx.StatusCode(zkHttpResponse.Status)
 		ctx.JSON(zkHttpResponse)
 		return

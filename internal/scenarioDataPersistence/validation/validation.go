@@ -1,7 +1,7 @@
 package validation
 
 import (
-	zkErrorsScenarioManager "axon/utils/zkerrors"
+	zkErrorsAxon "axon/utils/zkerrors"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	"github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strconv"
@@ -21,7 +21,7 @@ func GetIssuesListWithDetails(offset, limit string) *zkerrors.ZkError {
 
 func ValidateIssueHashOffsetAndLimit(issueHash, offset, limit string) *zkerrors.ZkError {
 	if zkCommon.IsEmpty(issueHash) {
-		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestIssueHashEmpty, nil)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestIssueHashEmpty, nil)
 		return &zkErr
 	}
 
@@ -38,12 +38,12 @@ func ValidateIssueHashOffsetAndLimit(issueHash, offset, limit string) *zkerrors.
 
 func ValidateGetSpanRawDataApi(traceId, spanId string) *zkerrors.ZkError {
 	if zkCommon.IsEmpty(traceId) {
-		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestTraceIdIdEmpty, nil)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestTraceIdIdEmpty, nil)
 		return &zkErr
 	}
 
 	if zkCommon.IsEmpty(spanId) {
-		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestSpanIdEmpty, nil)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestSpanIdEmpty, nil)
 		return &zkErr
 	}
 
@@ -52,7 +52,7 @@ func ValidateGetSpanRawDataApi(traceId, spanId string) *zkerrors.ZkError {
 
 func ValidateGetIncidentDetailsApi(traceId, offset, limit string) *zkerrors.ZkError {
 	if zkCommon.IsEmpty(traceId) {
-		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestTraceIdIdEmpty, nil)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestTraceIdIdEmpty, nil)
 		return &zkErr
 	}
 

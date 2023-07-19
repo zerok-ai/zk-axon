@@ -4,7 +4,7 @@ import (
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/repository"
 	"fmt"
-	utils "github.com/zerok-ai/zk-utils-go/common"
+	zkUtils "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strings"
@@ -32,13 +32,13 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services string,
 	var response traceResponse.IssueListWithDetailsResponse
 
 	var serviceList []string
-	if utils.IsEmpty(services) {
+	if zkUtils.IsEmpty(services) {
 		zkLogger.Info(LogTag, "service list is empty")
 	} else {
 		l := strings.Split(services, ",")
 		for _, service := range l {
 			v := strings.TrimSpace(service)
-			if utils.IsEmpty(v) {
+			if zkUtils.IsEmpty(v) {
 				continue
 			}
 			serviceList = append(serviceList, v)
