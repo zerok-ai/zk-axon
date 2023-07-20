@@ -73,7 +73,7 @@ func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 
 	resp, err := t.service.GetIssueDetailsService(issueHash)
 
-	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueListWithDetailsResponse](200, resp, resp, err)
+	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 }

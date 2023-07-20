@@ -3,13 +3,15 @@ package scenariodataresponse
 import (
 	"axon/internal/scenarioDataPersistence/model/dto"
 	"axon/utils"
+	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	"time"
 )
 
 var LogTag = "scenario_response"
 
 type IncidentListResponse struct {
-	TraceIdList []string `json:"trace_id_list"`
+	TraceIdList  []string `json:"trace_id_list"`
+	TotalRecords int      `json:"total_records"`
 }
 
 func ConvertIncidentTableDtoToIncidentListResponse(t []dto.IncidentTableDto) *IncidentListResponse {
@@ -18,7 +20,11 @@ func ConvertIncidentTableDtoToIncidentListResponse(t []dto.IncidentTableDto) *In
 		traceIdList = append(traceIdList, v.TraceId)
 	}
 
-	return &IncidentListResponse{TraceIdList: traceIdList}
+	if len(traceIdList) > 0 {
+		return &IncidentListResponse{TraceIdList: traceIdList, TotalRecords: t[0].TotalRows}
+	}
+
+	return &IncidentListResponse{TraceIdList: traceIdList, TotalRecords: 0}
 }
 
 type IssueDetails struct {
@@ -36,7 +42,12 @@ type IssueDetails struct {
 }
 
 type IssueListWithDetailsResponse struct {
-	Issues []IssueDetails `json:"issues"`
+	Issues       []IssueDetails `json:"issues"`
+	TotalRecords int            `json:"total_records"`
+}
+
+type IssueDetailsResponse struct {
+	Issues IssueDetails `json:"issue"`
 }
 
 func ConvertIssueListDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDto) *IssueListWithDetailsResponse {
@@ -49,6 +60,25 @@ func ConvertIssueListDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDt
 	}
 
 	resp.Issues = issuesList
+	if len(issuesList) > 0 {
+		resp.TotalRecords = t[0].TotalRows
+	}
+
+	return &resp
+}
+
+func ConvertIssueDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDto) *IssueDetailsResponse {
+	var resp IssueDetailsResponse
+
+	if t != nil && len(t) > 0 {
+		resp.Issues = ConvertIssueDetailsDtoToIssueDetails(t[0])
+	} else {
+		return nil
+	}
+
+	if len(t) > 1 {
+		zkLogger.Info(LogTag, "IssueDetailsDto has more than one record")
+	}
 
 	return &resp
 }

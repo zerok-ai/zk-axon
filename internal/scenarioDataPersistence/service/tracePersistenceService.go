@@ -14,7 +14,7 @@ var LogTag = "zk_trace_persistence_service"
 
 type TracePersistenceService interface {
 	GetIssueListWithDetailsService(services string, offset, limit int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
-	GetIssueDetailsService(issueHash string) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
+	GetIssueDetailsService(issueHash string) (traceResponse.IssueDetailsResponse, *zkErrors.ZkError)
 	GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
 	GetSpanRawDataService(traceId, spanId string) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
@@ -62,12 +62,12 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services string,
 	return response, &zkErr
 }
 
-func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
-	var response traceResponse.IssueListWithDetailsResponse
+func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (traceResponse.IssueDetailsResponse, *zkErrors.ZkError) {
+	var response traceResponse.IssueDetailsResponse
 
 	data, err := s.repo.GetIssueDetails(issueHash)
 	if err == nil {
-		response := traceResponse.ConvertIssueListDetailsDtoToIssueListDetailsResponse(data)
+		response := traceResponse.ConvertIssueDetailsDtoToIssueListDetailsResponse(data)
 		return *response, nil
 	}
 

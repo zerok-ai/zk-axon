@@ -6,6 +6,7 @@ import (
 )
 
 type IncidentTableDto struct {
+	TotalRows              int       `json:"total_rows"`
 	TraceId                string    `json:"trace_id"`
 	IssueHash              string    `json:"issue_hash"`
 	IncidentCollectionTime time.Time `json:"incident_collection_time"`
@@ -26,6 +27,7 @@ type SpanTableDto struct {
 }
 
 type IssueDetailsDto struct {
+	TotalRows       int            `json:"total_rows"`
 	IssueHash       string         `json:"issue_hash"`
 	IssueTitle      string         `json:"issue_title"`
 	ScenarioId      string         `json:"scenario_id"`
