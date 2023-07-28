@@ -4,6 +4,7 @@ import (
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/repository"
 	"axon/utils"
+	zkErrorsAxon "axon/utils/zkerrors"
 	"fmt"
 	zkUtils "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
@@ -33,13 +34,18 @@ type tracePersistenceService struct {
 func (s tracePersistenceService) GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IssueListWithDetailsResponse
 	var startTime time.Time
+	currentTime := time.Now().UTC()
 
-	if d, err := utils.ParseTimeString(st); err != nil {
+	if duration, err := utils.ParseTimeString(st); err != nil {
 		zkLogger.Error(LogTag, "failed to parse time string", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		return response, &zkErr
+	} else if currentTime.Add(duration).After(currentTime) {
+		zkLogger.Error(LogTag, "time string is not negative", err)
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeNotNegative, nil)
+		return response, &zkErr
 	} else {
-		startTime = time.Now().UTC().Add(-d)
+		startTime = currentTime.Add(duration)
 	}
 
 	var serviceList []string
