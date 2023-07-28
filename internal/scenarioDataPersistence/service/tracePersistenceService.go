@@ -3,17 +3,19 @@ package service
 import (
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/repository"
+	"axon/utils"
 	"fmt"
 	zkUtils "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strings"
+	"time"
 )
 
 var LogTag = "zk_trace_persistence_service"
 
 type TracePersistenceService interface {
-	GetIssueListWithDetailsService(services string, offset, limit int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
+	GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
 	GetIssueDetailsService(issueHash string) (traceResponse.IssueDetailsResponse, *zkErrors.ZkError)
 	GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
@@ -28,8 +30,17 @@ type tracePersistenceService struct {
 	repo repository.TracePersistenceRepo
 }
 
-func (s tracePersistenceService) GetIssueListWithDetailsService(services string, offset, limit int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
+func (s tracePersistenceService) GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IssueListWithDetailsResponse
+	var startTime time.Time
+
+	if d, err := utils.ParseTimeString(st); err != nil {
+		zkLogger.Error(LogTag, "failed to parse time string", err)
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
+		return response, &zkErr
+	} else {
+		startTime = time.Now().UTC().Add(-d)
+	}
 
 	var serviceList []string
 	if zkUtils.IsEmpty(services) {
@@ -51,7 +62,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services string,
 		return response, &zkErr
 	}
 
-	data, err := s.repo.IssueListDetailsRepo(serviceList, offset, limit)
+	data, err := s.repo.IssueListDetailsRepo(serviceList, startTime, limit, offset)
 	if err == nil {
 		response := traceResponse.ConvertIssueListDetailsDtoToIssueListDetailsResponse(data)
 		return *response, nil

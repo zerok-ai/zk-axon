@@ -38,8 +38,9 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 	services := ctx.URLParam(utils.ServicesQueryParam)
 	limit := ctx.URLParamDefault(utils.LimitQueryParam, "50")
 	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
+	st := ctx.URLParam(utils.StartTimeQueryParam)
 
-	if err := validation.GetIssuesListWithDetails(offset, limit); err != nil {
+	if err := validation.GetIssuesListWithDetails(offset, limit, st); err != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIssuesListWithDetailsHandler: ", err)
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
 		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
@@ -51,7 +52,7 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 	l, _ := strconv.Atoi(limit)
 	o, _ := strconv.Atoi(offset)
 
-	resp, err := t.service.GetIssueListWithDetailsService(services, o, l)
+	resp, err := t.service.GetIssueListWithDetailsService(services, st, l, o)
 
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueListWithDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)

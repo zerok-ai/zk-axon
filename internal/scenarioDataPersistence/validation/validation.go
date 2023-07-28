@@ -7,7 +7,12 @@ import (
 	"strconv"
 )
 
-func GetIssuesListWithDetails(offset, limit string) *zkerrors.ZkError {
+func GetIssuesListWithDetails(offset, limit, startTime string) *zkerrors.ZkError {
+	if zkCommon.IsEmpty(startTime) {
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeEmpty, nil)
+		return &zkErr
+	}
+
 	if zkErr := ValidateLimit(limit); zkErr != nil {
 		return zkErr
 	}
