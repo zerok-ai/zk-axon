@@ -27,12 +27,18 @@ type TracePersistenceRepo interface {
 	IssueListDetailsRepo(serviceList pq.StringArray, st time.Time, limit, offset int) ([]dto.IssueDetailsDto, error)
 	GetIssueDetails(issueHash string) ([]dto.IssueDetailsDto, error)
 	GetTraces(issueHash string, offset, limit int) ([]dto.IncidentTableDto, error)
+	GetTracesForScenarioId(scenarioId string, offset, limit int) ([]dto.IncidentTableDto, error)
 	GetSpans(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error)
 	GetSpanRawData(traceId, spanId string) ([]dto.SpanRawDataDetailsDto, error)
 }
 
 type tracePersistenceRepo struct {
 	dbRepo sqlDB.DatabaseRepo
+}
+
+func (z tracePersistenceRepo) GetTracesForScenarioId(scenarioId string, offset, limit int) ([]dto.IncidentTableDto, error) {
+	//TODO: Implement this method.
+	return []dto.IncidentTableDto{}, nil
 }
 
 func NewTracePersistenceRepo(dbRepo sqlDB.DatabaseRepo) TracePersistenceRepo {

@@ -12,6 +12,7 @@ const (
 	IssueHash  = "issueHash"
 	IncidentId = "incidentId"
 	SpanId     = "spanId"
+	ScenarioId = "scenarioId"
 	//Scenario   = "scenarioId"
 
 	// Query Params

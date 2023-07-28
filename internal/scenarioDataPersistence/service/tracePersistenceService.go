@@ -21,6 +21,7 @@ type TracePersistenceService interface {
 	GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
 	GetSpanRawDataService(traceId, spanId string) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
+	GetIncidentListServiceForScenarioId(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
 }
 
 func NewScenarioPersistenceService(repo repository.TracePersistenceRepo) TracePersistenceService {
@@ -29,6 +30,19 @@ func NewScenarioPersistenceService(repo repository.TracePersistenceRepo) TracePe
 
 type tracePersistenceService struct {
 	repo repository.TracePersistenceRepo
+}
+
+func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError) {
+	var response traceResponse.IncidentListResponse
+	data, err := s.repo.GetTracesForScenarioId(scenarioId, offset, limit)
+	if err == nil {
+		response := traceResponse.ConvertIncidentTableDtoToIncidentListResponse(data)
+		return *response, nil
+	}
+
+	zkLogger.Error(LogTag, "failed to get incident list for scenario Id", err)
+	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
+	return response, &zkErr
 }
 
 func (s tracePersistenceService) GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
