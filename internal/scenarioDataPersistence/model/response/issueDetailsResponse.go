@@ -9,22 +9,22 @@ import (
 
 var LogTag = "scenario_response"
 
-type IncidentListResponse struct {
+type IncidentIdListResponse struct {
 	TraceIdList  []string `json:"trace_id_list"`
 	TotalRecords int      `json:"total_records"`
 }
 
-func ConvertIncidentTableDtoToIncidentListResponse(t []dto.IncidentTableDto) *IncidentListResponse {
+func ConvertIncidentTableDtoToIncidentListResponse(t []dto.IncidentTableDto) *IncidentIdListResponse {
 	traceIdList := make([]string, 0)
 	for _, v := range t {
 		traceIdList = append(traceIdList, v.TraceId)
 	}
 
 	if len(traceIdList) > 0 {
-		return &IncidentListResponse{TraceIdList: traceIdList, TotalRecords: t[0].TotalRows}
+		return &IncidentIdListResponse{TraceIdList: traceIdList, TotalRecords: t[0].TotalRows}
 	}
 
-	return &IncidentListResponse{TraceIdList: traceIdList, TotalRecords: 0}
+	return &IncidentIdListResponse{TraceIdList: traceIdList, TotalRecords: 0}
 }
 
 type IssueDetails struct {

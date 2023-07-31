@@ -36,7 +36,7 @@ func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) 
 
 	if err := validation.ValidateIdStringOffsetAndLimit(scenarioId, offset, limit); err != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIncidentListForScenarioId api", err)
-		zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentListResponse](200, traceResponse.IncidentListResponse{}, nil, err)
+		zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentIdListResponse](200, traceResponse.IncidentIdListResponse{}, nil, err)
 		ctx.StatusCode(zkHttpResponse.Status)
 		ctx.JSON(zkHttpResponse)
 		return
@@ -47,7 +47,7 @@ func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) 
 
 	resp, err := t.service.GetIncidentListServiceForScenarioId(scenarioId, o, l)
 
-	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentListResponse](200, resp, resp, err)
+	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentDetailListResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 }
@@ -122,7 +122,7 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 
 	resp, err := t.service.GetIncidentListService(issueHash, o, l)
 
-	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentListResponse](200, resp, resp, err)
+	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentIdListResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 }

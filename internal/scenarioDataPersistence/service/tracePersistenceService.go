@@ -18,10 +18,10 @@ var LogTag = "zk_trace_persistence_service"
 type TracePersistenceService interface {
 	GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
 	GetIssueDetailsService(issueHash string) (traceResponse.IssueDetailsResponse, *zkErrors.ZkError)
-	GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
+	GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentIdListResponse, *zkErrors.ZkError)
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
 	GetSpanRawDataService(traceId, spanId string) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
-	GetIncidentListServiceForScenarioId(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
+	GetIncidentListServiceForScenarioId(issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError)
 }
 
 func NewScenarioPersistenceService(repo repository.TracePersistenceRepo) TracePersistenceService {
@@ -32,11 +32,11 @@ type tracePersistenceService struct {
 	repo repository.TracePersistenceRepo
 }
 
-func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError) {
-	var response traceResponse.IncidentListResponse
+func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError) {
+	var response traceResponse.IncidentDetailListResponse
 	data, err := s.repo.GetTracesForScenarioId(scenarioId, offset, limit)
 	if err == nil {
-		response := traceResponse.ConvertIncidentTableDtoToIncidentListResponse(data)
+		response := traceResponse.ConvertIncidentTableDtoToIncidentDetailListResponse(data)
 		return *response, nil
 	}
 
@@ -107,8 +107,8 @@ func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (trace
 	return response, &zkErr
 }
 
-func (s tracePersistenceService) GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError) {
-	var response traceResponse.IncidentListResponse
+func (s tracePersistenceService) GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentIdListResponse, *zkErrors.ZkError) {
+	var response traceResponse.IncidentIdListResponse
 	if offset < 0 || limit < 1 {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
