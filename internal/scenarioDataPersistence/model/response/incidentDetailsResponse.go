@@ -11,11 +11,12 @@ type IncidentDetailListResponse struct {
 }
 
 type IncidentDetail struct {
-	IncidentId   string    `json:"incident_id"`
-	EntryService string    `json:"entry_service"`
-	EndPoint     string    `json:"entry_path"`
-	RootSpanTime time.Time `json:"root_span_time"`
-	LatencyNs    *float32  `json:"latency_ns"`
+	IncidentId             string    `json:"incident_id"`
+	EntryService           string    `json:"entry_service"`
+	EndPoint               string    `json:"entry_path"`
+	RootSpanTime           time.Time `json:"root_span_time"`
+	LatencyNs              *float32  `json:"latency_ns"`
+	IncidentCollectionTime time.Time `json:"incident_collection_time"`
 }
 
 func ConvertIncidentTableDtoToIncidentDetailListResponse(t []dto.IncidentTableDto) *IncidentDetailListResponse {
@@ -33,10 +34,11 @@ func ConvertIncidentTableDtoToIncidentDetailListResponse(t []dto.IncidentTableDt
 
 func getIncidentDetail(t dto.IncidentTableDto) IncidentDetail {
 	return IncidentDetail{
-		IncidentId:   t.TraceId,
-		EntryService: t.EntryService,
-		EndPoint:     t.EndPoint,
-		RootSpanTime: t.RootSpanTime,
-		LatencyNs:    t.LatencyNs,
+		IncidentId:             t.TraceId,
+		EntryService:           t.EntryService,
+		EndPoint:               t.EndPoint,
+		RootSpanTime:           t.RootSpanTime,
+		LatencyNs:              t.LatencyNs,
+		IncidentCollectionTime: t.IncidentCollectionTime,
 	}
 }

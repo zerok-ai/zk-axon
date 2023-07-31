@@ -99,7 +99,7 @@ func ValidateOffset(offset string) *zkerrors.ZkError {
 			return &zkErr
 		}
 
-		if offsetInt < 1 {
+		if offsetInt < 0 {
 			zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorBadRequest, "Offset is invalid.")
 			logger.Debug(VALIDATE_LOG_TAG, "Offset is invalid.")
 			return &zkErr
