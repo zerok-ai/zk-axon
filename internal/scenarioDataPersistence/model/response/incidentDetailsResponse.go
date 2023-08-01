@@ -17,6 +17,7 @@ type IncidentDetail struct {
 	RootSpanTime           time.Time `json:"root_span_time"`
 	LatencyNs              *float32  `json:"latency_ns"`
 	IncidentCollectionTime time.Time `json:"incident_collection_time"`
+	Protocol               string    `json:"protocol"`
 }
 
 func ConvertIncidentTableDtoToIncidentDetailListResponse(t []dto.IncidentTableDto) *IncidentDetailListResponse {
@@ -40,5 +41,6 @@ func getIncidentDetail(t dto.IncidentTableDto) IncidentDetail {
 		RootSpanTime:           t.RootSpanTime,
 		LatencyNs:              t.LatencyNs,
 		IncidentCollectionTime: t.IncidentCollectionTime,
+		Protocol:               t.Protocol,
 	}
 }

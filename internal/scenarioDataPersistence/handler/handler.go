@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"axon/internal/config"
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/service"
 	"axon/internal/scenarioDataPersistence/validation"
@@ -27,6 +28,7 @@ var LogTag = "trace_persistence_handler"
 
 type tracePersistenceHandler struct {
 	service service.TracePersistenceService
+	cfg     config.AppConfigs
 }
 
 func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) {
@@ -47,14 +49,22 @@ func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) 
 
 	resp, err := t.service.GetIncidentListServiceForScenarioId(scenarioId, o, l)
 
-	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentDetailListResponse](200, resp, resp, err)
+	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.IncidentDetailListResponse]
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.IncidentDetailListResponse](200, resp, resp, err)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.IncidentDetailListResponse](200, resp, nil, err)
+	}
+
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 }
 
-func NewTracePersistenceHandler(persistenceService service.TracePersistenceService) TracePersistenceHandler {
+func NewTracePersistenceHandler(persistenceService service.TracePersistenceService, cfg config.AppConfigs) TracePersistenceHandler {
 	return &tracePersistenceHandler{
 		service: persistenceService,
+		cfg:     cfg,
 	}
 }
 
