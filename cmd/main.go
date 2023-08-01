@@ -34,7 +34,7 @@ func main() {
 
 	tpr := repository.NewTracePersistenceRepo(zkPostgresRepo)
 	tps := service.NewScenarioPersistenceService(tpr)
-	tph := handler.NewTracePersistenceHandler(tps)
+	tph := handler.NewTracePersistenceHandler(tps, cfg)
 
 	app := newApp(tph)
 

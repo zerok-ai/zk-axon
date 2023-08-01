@@ -7,6 +7,7 @@ import (
 
 var (
 	ZkErrorBadRequestIssueHashEmpty       = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "IssueHash cannot be empty"}
+	ZkErrorBadRequestScenarioIdEmpty      = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "Scenario Id cannot be empty"}
 	ZkErrorBadRequestTraceIdIdEmpty       = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "TraceId cannot be empty"}
 	ZkErrorBadRequestScenarioIdListEmpty  = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "Scenario Id List cannot be empty"}
 	ZkErrorBadRequestStartTimeEmpty       = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "Start time cannot be empty"}

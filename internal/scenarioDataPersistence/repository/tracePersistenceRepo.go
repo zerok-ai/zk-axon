@@ -21,6 +21,8 @@ const (
 	GetSpanQueryUsingTraceId                    = "SELECT trace_id, span_id, source, destination, metadata, latency_ns, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND workload_id_list is not NULL ORDER BY time DESC LIMIT $2 OFFSET $3"
 	GetSpanQueryUsingTraceIdAndSpanId           = "SELECT trace_id, span_id, source, destination, metadata, latency_ns, protocol, status, parent_span_id, workload_id_list, time FROM span WHERE trace_id=$1 AND span_id=$2"
 	GetSpanRawDataQuery                         = "SELECT span.trace_id, span.span_id, request_payload, response_payload, protocol FROM span_raw_data INNER JOIN span USING(span_id) WHERE span.trace_id=$1 AND span.span_id=$2"
+	GetTraceQueryByScenarioId             = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, entry_service, end_point, protocol, root_span_time, latency_ns FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, incident.entry_service, incident.end_point, incident.protocol, incident.root_span_time, incident.latency_ns FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash WHERE issue.scenario_id = $2) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $3 OFFSET $4"
+
 )
 
 var LogTag = "zk_trace_persistence_repo"
@@ -30,12 +32,39 @@ type TracePersistenceRepo interface {
 	GetScenarioDetailsRepo(scenarioId, serviceList pq.StringArray, st time.Time) ([]dto.ScenarioDetailsDto, error)
 	GetIssueDetails(issueHash string) ([]dto.IssueDetailsDto, error)
 	GetTraces(issueHash string, offset, limit int) ([]dto.IncidentTableDto, error)
+	GetTracesForScenarioId(scenarioId string, offset, limit int) ([]dto.IncidentTableDto, error)
 	GetSpans(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error)
 	GetSpanRawData(traceId, spanId string) ([]dto.SpanRawDataDetailsDto, error)
 }
 
 type tracePersistenceRepo struct {
 	dbRepo sqlDB.DatabaseRepo
+}
+
+func (z tracePersistenceRepo) GetTracesForScenarioId(scenarioId string, offset, limit int) ([]dto.IncidentTableDto, error) {
+	rows, err, closeRow := z.dbRepo.GetAll(GetTraceQueryByScenarioId, []any{true, scenarioId, limit, offset})
+	if rows != nil {
+		defer closeRow()
+	}
+
+	logMessage := fmt.Sprintf("scenario Id: %s", scenarioId)
+
+	if err != nil || rows == nil {
+		zkLogger.Error(LogTag, logMessage, err)
+		return nil, err
+	}
+
+	var responseArr []dto.IncidentTableDto
+	for rows.Next() {
+		var rawData dto.IncidentTableDto
+		err := rows.Scan(&rawData.TotalRows, &rawData.TraceId, &rawData.IncidentCollectionTime, &rawData.EntryService, &rawData.EndPoint, &rawData.Protocol, &rawData.RootSpanTime, &rawData.LatencyNs)
+		if err != nil {
+			zkLogger.Error(LogTag, logMessage, err)
+		}
+		responseArr = append(responseArr, rawData)
+	}
+
+	return responseArr, nil
 }
 
 func NewTracePersistenceRepo(dbRepo sqlDB.DatabaseRepo) TracePersistenceRepo {
@@ -144,19 +173,20 @@ func (z tracePersistenceRepo) GetTraces(issueHash string, offset, limit int) ([]
 	rows, err, closeRow := z.dbRepo.GetAll(GetTraceQuery, []any{true, issueHash, limit, offset})
 	defer closeRow()
 
+	logMessage := fmt.Sprintf("issue_hash: %s", issueHash)
+
 	if err != nil || rows == nil {
-		zkLogger.Error(LogTag, fmt.Sprintf("issue_hash: %s", issueHash), err)
+		zkLogger.Error(LogTag, logMessage, err)
 		return nil, err
 	}
 
 	var responseArr []dto.IncidentTableDto
 	for rows.Next() {
 		var rawData dto.IncidentTableDto
-		err := rows.Scan(&rawData.TotalRows, &rawData.TraceId, &rawData.IssueHash, &rawData.IncidentCollectionTime)
+		err := rows.Scan(&rawData.TotalRows, &rawData.TraceId, &rawData.IssueHash, &rawData.IncidentCollectionTime, &rawData.EntryService, &rawData.EndPoint, &rawData.Protocol, &rawData.RootSpanTime, &rawData.LatencyNs)
 		if err != nil {
-			zkLogger.Error(LogTag, fmt.Sprintf("issue_hash: %s", issueHash), err)
+			zkLogger.Error(LogTag, logMessage, err)
 		}
-
 		responseArr = append(responseArr, rawData)
 	}
 

@@ -55,6 +55,23 @@ func ValidateIssueHashOffsetAndLimit(issueHash, offset, limit string) *zkerrors.
 	return nil
 }
 
+func ValidateScenarioIdOffsetAndLimit(scenarioId, offset, limit string) *zkerrors.ZkError {
+	if zkCommon.IsEmpty(scenarioId) {
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdEmpty, nil)
+		return &zkErr
+	}
+
+	if zkErr := ValidateLimit(limit); zkErr != nil {
+		return zkErr
+	}
+
+	if zkErr := ValidateOffset(offset); zkErr != nil {
+		return zkErr
+	}
+
+	return nil
+}
+
 func ValidateGetSpanRawDataApi(traceId, spanId string) *zkerrors.ZkError {
 	if zkCommon.IsEmpty(traceId) {
 		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestTraceIdIdEmpty, nil)
