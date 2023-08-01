@@ -41,6 +41,17 @@ type IssueDetailsDto struct {
 	Incidents       pq.StringArray `json:"incidents"`
 }
 
+type ScenarioDetailsDto struct {
+	ScenarioId      string         `json:"scenario_id"`
+	ScenarioVersion string         `json:"scenario_version"`
+	Sources         pq.StringArray `json:"sources"`
+	Destinations    pq.StringArray `json:"destinations"`
+	TotalCount      int            `json:"total_count"`
+	Velocity        float32        `json:"velocity"`
+	FirstSeen       time.Time      `json:"first_seen"`
+	LastSeen        time.Time      `json:"last_seen"`
+}
+
 type SpanRawDataDetailsDto struct {
 	TraceId         string `json:"trace_id"`
 	SpanId          string `json:"span_id"`

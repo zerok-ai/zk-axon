@@ -41,9 +41,24 @@ type IssueDetails struct {
 	Incidents       []string  `json:"incidents"`
 }
 
+type ScenarioDetails struct {
+	ScenarioId      string    `json:"scenario_id"`
+	ScenarioVersion string    `json:"scenario_version"`
+	Sources         []string  `json:"sources"`
+	Destinations    []string  `json:"destinations"`
+	TotalCount      int       `json:"total_count"`
+	Velocity        float32   `json:"velocity"`
+	FirstSeen       time.Time `json:"first_seen"`
+	LastSeen        time.Time `json:"last_seen"`
+}
+
 type IssueListWithDetailsResponse struct {
 	Issues       []IssueDetails `json:"issues"`
 	TotalRecords int            `json:"total_records"`
+}
+
+type ScenarioDetailsResponse struct {
+	Scenarios []ScenarioDetails `json:"scenarios"`
 }
 
 type IssueDetailsResponse struct {
@@ -64,6 +79,19 @@ func ConvertIssueListDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDt
 		resp.TotalRecords = t[0].TotalRows
 	}
 
+	return &resp
+}
+
+func ConvertScenarioDetailsDtoToScenarioDetailsResponse(t []dto.ScenarioDetailsDto) *ScenarioDetailsResponse {
+	var resp ScenarioDetailsResponse
+	scenarioDetails := make([]ScenarioDetails, 0)
+
+	for _, v := range t {
+		r := ConvertScenarioDetailsDtoToScenarioDetailsDetailsResponse(v)
+		scenarioDetails = append(scenarioDetails, r)
+	}
+
+	resp.Scenarios = scenarioDetails
 	return &resp
 }
 
@@ -106,6 +134,34 @@ func ConvertIssueDetailsDtoToIssueDetails(v dto.IssueDetailsDto) IssueDetails {
 	} else {
 		r.Incidents = v.Incidents
 	}
+
+	if len(v.Sources) >= 5 {
+		r.Sources = v.Sources[:5]
+	} else {
+		r.Sources = v.Sources
+	}
+
+	if len(v.Destinations) >= 5 {
+		r.Destinations = v.Destinations[:5]
+	} else {
+		r.Destinations = v.Destinations
+	}
+
+	return r
+}
+
+func ConvertScenarioDetailsDtoToScenarioDetailsDetailsResponse(v dto.ScenarioDetailsDto) ScenarioDetails {
+	var r ScenarioDetails
+	hours := utils.HoursBetween(v.FirstSeen, v.LastSeen) + 1
+
+	r.ScenarioId = v.ScenarioId
+	r.ScenarioVersion = v.ScenarioVersion
+	r.Sources = v.Sources
+	r.Destinations = v.Destinations
+	r.TotalCount = v.TotalCount
+	r.Velocity = float32(v.TotalCount / hours)
+	r.FirstSeen = v.FirstSeen
+	r.LastSeen = v.LastSeen
 
 	if len(v.Sources) >= 5 {
 		r.Sources = v.Sources[:5]

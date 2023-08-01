@@ -24,6 +24,20 @@ func GetIssuesListWithDetails(offset, limit, startTime string) *zkerrors.ZkError
 	return nil
 }
 
+func ValidateGetScenarioDetails(scenarioIds, startTime string) *zkerrors.ZkError {
+	if zkCommon.IsEmpty(startTime) {
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeEmpty, nil)
+		return &zkErr
+	}
+
+	if zkCommon.IsEmpty(scenarioIds) {
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
+		return &zkErr
+	}
+
+	return nil
+}
+
 func ValidateIssueHashOffsetAndLimit(issueHash, offset, limit string) *zkerrors.ZkError {
 	if zkCommon.IsEmpty(issueHash) {
 		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestIssueHashEmpty, nil)

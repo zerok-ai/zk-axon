@@ -17,6 +17,7 @@ var LogTag = "zk_trace_persistence_service"
 
 type TracePersistenceService interface {
 	GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
+	GetScenarioDetailsService(scenarioIds, services, st string) (traceResponse.ScenarioDetailsResponse, *zkErrors.ZkError)
 	GetIssueDetailsService(issueHash string) (traceResponse.IssueDetailsResponse, *zkErrors.ZkError)
 	GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentListResponse, *zkErrors.ZkError)
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
@@ -71,6 +72,70 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, st str
 	data, err := s.repo.IssueListDetailsRepo(serviceList, startTime, limit, offset)
 	if err == nil {
 		response := traceResponse.ConvertIssueListDetailsDtoToIssueListDetailsResponse(data)
+		return *response, nil
+	}
+
+	zkLogger.Error(LogTag, "failed to get issue list with details", err)
+	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
+	return response, &zkErr
+}
+
+func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services, st string) (traceResponse.ScenarioDetailsResponse, *zkErrors.ZkError) {
+	var response traceResponse.ScenarioDetailsResponse
+	var startTime time.Time
+	currentTime := time.Now().UTC()
+
+	if duration, err := utils.ParseTimeString(st); err != nil {
+		zkLogger.Error(LogTag, "failed to parse time string", err)
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
+		return response, &zkErr
+	} else if currentTime.Add(duration).After(currentTime) {
+		zkLogger.Error(LogTag, "time string is not negative", err)
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeNotNegative, nil)
+		return response, &zkErr
+	} else {
+		startTime = currentTime.Add(duration)
+	}
+
+	var serviceList []string
+	if zkUtils.IsEmpty(services) {
+		zkLogger.Info(LogTag, "service list is empty")
+	} else {
+		l := strings.Split(services, ",")
+		for _, service := range l {
+			v := strings.TrimSpace(service)
+			if zkUtils.IsEmpty(v) {
+				continue
+			}
+			serviceList = append(serviceList, v)
+		}
+	}
+
+	var scenarioIdList []string
+	if zkUtils.IsEmpty(scenarioIds) {
+		zkLogger.Error(LogTag, "scenario id list is empty")
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
+		return response, &zkErr
+	} else {
+		l := strings.Split(scenarioIds, ",")
+		for _, scenario := range l {
+			v := strings.TrimSpace(scenario)
+			if zkUtils.IsEmpty(v) {
+				continue
+			}
+			scenarioIdList = append(scenarioIdList, v)
+		}
+	}
+
+	if scenarioIdList == nil || len(scenarioIdList) == 0 {
+		zkLogger.Error(LogTag, "scenario id list is empty after parsing")
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
+		return response, &zkErr
+	}
+
+	data, err := s.repo.GetScenarioDetailsRepo(scenarioIdList, serviceList, startTime)
+	if err == nil {
+		response := traceResponse.ConvertScenarioDetailsDtoToScenarioDetailsResponse(data)
 		return *response, nil
 	}
 

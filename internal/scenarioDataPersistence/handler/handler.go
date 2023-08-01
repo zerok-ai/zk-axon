@@ -16,6 +16,7 @@ import (
 
 type TracePersistenceHandler interface {
 	GetIssuesListWithDetailsHandler(ctx iris.Context)
+	GetScenarioDetailsHandler(ctx iris.Context)
 	GetIssueDetailsHandler(ctx iris.Context)
 	GetIncidentListHandler(ctx iris.Context)
 	GetIncidentDetailsHandler(ctx iris.Context)
@@ -55,6 +56,27 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 	resp, err := t.service.GetIssueListWithDetailsService(services, st, l, o)
 
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueListWithDetailsResponse](200, resp, resp, err)
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+}
+
+func (t tracePersistenceHandler) GetScenarioDetailsHandler(ctx iris.Context) {
+	services := ctx.URLParam(utils.ServicesQueryParam)
+	scenarioIds := ctx.URLParam(utils.ScenarioIdListQueryParam)
+	st := ctx.URLParam(utils.StartTimeQueryParam)
+
+	if err := validation.ValidateGetScenarioDetails(scenarioIds, st); err != nil {
+		zkLogger.Error(LogTag, "Error while validating GetScenarioDetailsHandler: ", err)
+		z := &zkHttp.ZkHttpResponseBuilder[any]{}
+		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
+		ctx.StatusCode(zkHttpResponse.Status)
+		ctx.JSON(zkHttpResponse)
+		return
+	}
+
+	resp, err := t.service.GetScenarioDetailsService(scenarioIds, services, st)
+
+	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.ScenarioDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 }
