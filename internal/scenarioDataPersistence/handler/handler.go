@@ -34,6 +34,7 @@ type tracePersistenceHandler struct {
 
 func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) {
 	scenarioId := ctx.Params().Get(utils.ScenarioId)
+	issueHash := ctx.URLParam(utils.IssueHashQueryParam)
 	limit := ctx.URLParamDefault(utils.LimitQueryParam, "50")
 	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
 
@@ -48,7 +49,7 @@ func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) 
 	l, _ := strconv.Atoi(limit)
 	o, _ := strconv.Atoi(offset)
 
-	resp, err := t.service.GetIncidentListServiceForScenarioId(scenarioId, o, l)
+	resp, err := t.service.GetIncidentListServiceForScenarioId(scenarioId, issueHash, o, l)
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.IncidentDetailListResponse]
 
@@ -71,6 +72,7 @@ func NewTracePersistenceHandler(persistenceService service.TracePersistenceServi
 
 func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Context) {
 	services := ctx.URLParam(utils.ServicesQueryParam)
+	scenarioIds := ctx.URLParam(utils.ScenarioIdListQueryParam)
 	limit := ctx.URLParamDefault(utils.LimitQueryParam, "50")
 	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
 	st := ctx.URLParam(utils.StartTimeQueryParam)
@@ -87,7 +89,7 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 	l, _ := strconv.Atoi(limit)
 	o, _ := strconv.Atoi(offset)
 
-	resp, err := t.service.GetIssueListWithDetailsService(services, st, l, o)
+	resp, err := t.service.GetIssueListWithDetailsService(services, scenarioIds, st, l, o)
 
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueListWithDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)

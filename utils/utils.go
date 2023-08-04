@@ -16,6 +16,7 @@ const (
 	//Scenario   = "scenarioId"
 
 	// Query Params
+	IssueHashQueryParam      = "issue_hash"
 	SpanIdQueryParam         = "span_id"
 	ServicesQueryParam       = "services"
 	ScenarioIdListQueryParam = "scenario_id_list"

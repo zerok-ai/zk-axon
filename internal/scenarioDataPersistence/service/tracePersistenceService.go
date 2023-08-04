@@ -9,6 +9,7 @@ import (
 	zkUtils "github.com/zerok-ai/zk-utils-go/common"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,13 +17,13 @@ import (
 var LogTag = "zk_trace_persistence_service"
 
 type TracePersistenceService interface {
-	GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
+	GetIssueListWithDetailsService(services, scenarioIds, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError)
 	GetScenarioDetailsService(scenarioIds, services, st string) (traceResponse.ScenarioDetailsResponse, *zkErrors.ZkError)
 	GetIssueDetailsService(issueHash string) (traceResponse.IssueDetailsResponse, *zkErrors.ZkError)
 	GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentIdListResponse, *zkErrors.ZkError)
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
 	GetSpanRawDataService(traceId, spanId string) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
-	GetIncidentListServiceForScenarioId(issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError)
+	GetIncidentListServiceForScenarioId(scenarioId, issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError)
 }
 
 func NewScenarioPersistenceService(repo repository.TracePersistenceRepo) TracePersistenceService {
@@ -33,7 +34,7 @@ type tracePersistenceService struct {
 	repo repository.TracePersistenceRepo
 }
 
-func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError) {
+func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId, issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentDetailListResponse
 	if offset < 0 || limit < 1 {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
@@ -41,7 +42,7 @@ func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId 
 		return response, &zkErr
 	}
 
-	data, err := s.repo.GetTracesForScenarioId(scenarioId, offset, limit)
+	data, err := s.repo.GetTracesForScenarioId(scenarioId, issueHash, limit, offset)
 	if err == nil {
 		response := traceResponse.ConvertIncidentTableDtoToIncidentDetailListResponse(data)
 		return *response, nil
@@ -52,7 +53,7 @@ func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId 
 	return response, &zkErr
 }
 
-func (s tracePersistenceService) GetIssueListWithDetailsService(services, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
+func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenarioIds, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IssueListWithDetailsResponse
 	var startTime time.Time
 	currentTime := time.Now().UTC()
@@ -83,13 +84,33 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, st str
 		}
 	}
 
+	var scenarioIdList []int
+	if zkUtils.IsEmpty(scenarioIds) {
+		zkLogger.Info(LogTag, "scenarioIds list is empty")
+	} else {
+		l := strings.Split(scenarioIds, ",")
+		for _, scenario := range l {
+			v := strings.TrimSpace(scenario)
+			if zkUtils.IsEmpty(v) {
+				continue
+			}
+			i, err := strconv.Atoi(v)
+			if err != nil {
+				zkLogger.Error(LogTag, fmt.Sprintf("failed to convert scenario id to int, scenarioId: %s ", v), err)
+				zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdNotInteger, nil)
+				return response, &zkErr
+			}
+			scenarioIdList = append(scenarioIdList, i)
+		}
+	}
+
 	if offset < 0 || limit < 1 {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
 		return response, &zkErr
 	}
 
-	data, err := s.repo.IssueListDetailsRepo(serviceList, startTime, limit, offset)
+	data, err := s.repo.IssueListDetailsRepo(serviceList, scenarioIdList, limit, offset, startTime)
 	if err == nil {
 		response := traceResponse.ConvertIssueListDetailsDtoToIssueListDetailsResponse(data)
 		return *response, nil
