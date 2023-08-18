@@ -18,17 +18,28 @@ type IncidentTableDto struct {
 }
 
 type SpanTableDto struct {
-	TraceId        string         `json:"trace_id"`
-	SpanId         string         `json:"span_id"`
-	ParentSpanId   string         `json:"parent_span_id"`
-	Source         string         `json:"source"`
-	Destination    string         `json:"destination"`
-	WorkloadIdList pq.StringArray `json:"workload_id_list"`
-	Status         string         `json:"status"`
-	Metadata       string         `json:"metadata"`
-	LatencyNs      float32        `json:"latency_ns"`
-	Protocol       string         `json:"protocol"`
-	Time           *time.Time     `json:"time"`
+	TraceID             string         `json:"trace_id"`
+	ParentSpanID        string         `json:"parent_span_id"`
+	SpanID              string         `json:"span_id"`
+	IsRoot              bool           `json:"is_root"`
+	Kind                string         `json:"kind"`
+	StartTime           time.Time      `json:"start_time"`
+	Latency             float32        `json:"latency"`
+	Source              string         `json:"source"`
+	Destination         string         `json:"destination"`
+	WorkloadIDList      pq.StringArray `json:"workload_id_list"`
+	Protocol            string         `json:"protocol"`
+	IssueHashList       pq.StringArray `json:"issue_hash_list"`
+	RequestPayloadSize  int64          `json:"request_payload_size"`
+	ResponsePayloadSize int64          `json:"response_payload_size"`
+	Method              string         `json:"method"`
+	Route               string         `json:"route"`
+	Scheme              string         `json:"scheme"`
+	Path                string         `json:"path"`
+	Query               string         `json:"query"`
+	Status              int            `json:"status"`
+	Metadata            *string        `json:"metadata"`
+	Username            string         `json:"username"`
 }
 
 type IssueDetailsDto struct {
@@ -58,9 +69,12 @@ type ScenarioDetailsDto struct {
 }
 
 type SpanRawDataDetailsDto struct {
-	TraceId         string `json:"trace_id"`
-	SpanId          string `json:"span_id"`
-	Protocol        string `json:"protocol"`
-	RequestPayload  []byte `json:"request_payload"`
-	ResponsePayload []byte `json:"response_payload"`
+	TraceID     string `json:"trace_id"`
+	SpanID      string `json:"span_id"`
+	Protocol    string `json:"protocol"`
+	ReqHeaders  string `json:"req_headers"`
+	RespHeaders string `json:"resp_headers"`
+	IsTruncated bool   `json:"is_truncated"`
+	ReqBody     []byte `json:"req_body"`
+	RespBody    []byte `json:"resp_body"`
 }
