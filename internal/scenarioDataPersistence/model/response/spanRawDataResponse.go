@@ -21,16 +21,23 @@ type SpanRawDataDetails struct {
 func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (*SpanRawDataResponse, *error) {
 	respMap := make(map[string]SpanRawDataDetails, 0)
 	for _, v := range t {
-		reqDecompressedStr, err := crypto.DecompressStringGzip(v.RequestPayload)
-		if err != nil {
-			zkLogger.Error(LogTag, "error decompressing request payload", err)
-			return nil, &err
+
+		var reqDecompressedStr, resDecompressedStr string
+		var err error
+		if v.RequestPayload != nil && len(v.RequestPayload) != 0 {
+			reqDecompressedStr, err = crypto.DecompressStringGzip(v.RequestPayload)
+			if err != nil {
+				zkLogger.Error(LogTag, "error decompressing request payload", err)
+				return nil, &err
+			}
 		}
 
-		resDecompressedStr, err := crypto.DecompressStringGzip(v.ResponsePayload)
-		if err != nil {
-			zkLogger.Error(LogTag, "error decompressing response payload", err)
-			return nil, &err
+		if v.ResponsePayload != nil && len(v.ResponsePayload) != 0 {
+			resDecompressedStr, err = crypto.DecompressStringGzip(v.ResponsePayload)
+			if err != nil {
+				zkLogger.Error(LogTag, "error decompressing response payload", err)
+				return nil, &err
+			}
 		}
 
 		s := SpanRawDataDetails{
