@@ -26,9 +26,8 @@ spec:
               name: postgres-postgresql
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
-        image: {{ .Values.zkAxon.zkAxon.image.repository }}:{{ .Values.zkAxon.zkAxon.image.tag
-          | default .Chart.AppVersion }}
-        imagePullPolicy: {{ .Values.zkAxon.zkAxon.imagePullPolicy }}
+        image: {{ .Values.image.repo }}:{{ .Chart.Version }}
+        imagePullPolicy: {{ .Values.image.imagePullPolicy }}
         name: zk-axon
         ports:
         - containerPort: 80
