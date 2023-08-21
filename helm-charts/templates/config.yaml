@@ -1,0 +1,28 @@
+apiVersion: v1
+data:
+  config.yaml: |
+
+    server:
+      host: localhost
+      port: 80
+    logs:
+      color: true
+      level: DEBUG
+    http:
+      debug: true
+    postgres:
+      host: {{ .Values.postgres.host }}
+      port: {{ .Values.postgres.port }}
+      user: {{ .Values.postgres.user }}
+      password: {{ .Values.postgres.password }}
+      dbname: {{ .Values.postgres.database }}
+      max_connections: 5
+      max_idle_connections: 5
+      connection_max_lifetime_in_minutes: 10
+
+kind: ConfigMap
+metadata:
+  labels:
+    app: zk-axon
+  name: zk-axon
+  namespace: zk-client

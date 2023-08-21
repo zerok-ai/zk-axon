@@ -142,6 +142,6 @@ jobs:
           --set=postgres.user=$POSTGRES_USER \
           --set=postgres.dbname=$POSTGRES_DB \
           upgrade $APP_NAME \
-           -f ./helm-charts/$ENVIRONMENT.yaml ./helm-charts/ \
+           -f ./helm-charts/values.yaml ./helm-charts/ \
            --create-namespace \
            --namespace $NS
