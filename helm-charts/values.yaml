@@ -26,7 +26,7 @@ zkAxon:
   type: ClusterIP
   zkAxon:
     image:
-      repository: us-west1-docker.pkg.dev/zerok-dev/zk-axon/zk-axon
+      repository: us-west1-docker.pkg.dev/zerok-dev/zk-client/zk-axon
       tag: dev
     imagePullPolicy: Always
     resources:
