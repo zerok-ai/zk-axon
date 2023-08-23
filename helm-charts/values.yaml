@@ -1,3 +1,7 @@
+
+global:
+  dockerBase: "us-west1-docker.pkg.dev/zerok-dev/zk-client"
+
 kubernetesClusterDomain: cluster.local
 zkAxon:
   ports:
@@ -26,6 +30,6 @@ postgres:
   connection_max_lifetime_in_minutes: 10
 
 image:
-  repo: "us-west1-docker.pkg.dev/zerok-dev/zk-client/zk-axon"
+  repo: "zk-axon"
   tag: latest
   imagePullPolicy: Always
