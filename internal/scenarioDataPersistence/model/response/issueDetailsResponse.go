@@ -95,20 +95,20 @@ func ConvertScenarioDetailsDtoToScenarioDetailsResponse(t []dto.ScenarioDetailsD
 	return &resp
 }
 
-func ConvertIssueDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDto) *IssueDetailsResponse {
+func ConvertIssueDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDto) IssueDetailsResponse {
 	var resp IssueDetailsResponse
 
 	if t != nil && len(t) > 0 {
 		resp.Issues = ConvertIssueDetailsDtoToIssueDetails(t[0])
 	} else {
-		return nil
+		return resp
 	}
 
 	if len(t) > 1 {
 		zkLogger.Info(LogTag, "IssueDetailsDto has more than one record")
 	}
 
-	return &resp
+	return resp
 }
 
 type IssueWithDetailsResponse struct {

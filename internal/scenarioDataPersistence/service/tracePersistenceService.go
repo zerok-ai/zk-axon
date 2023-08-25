@@ -191,7 +191,7 @@ func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (trace
 	data, err := s.repo.GetIssueDetails(issueHash)
 	if err == nil {
 		response := traceResponse.ConvertIssueDetailsDtoToIssueListDetailsResponse(data)
-		return *response, nil
+		return response, nil
 	}
 
 	zkLogger.Error(LogTag, "failed to get issue details", err)
@@ -246,10 +246,10 @@ func (s tracePersistenceService) GetSpanRawDataService(traceId, spanId string) (
 		if respErr != nil {
 			zkLogger.Error(LogTag, "failed to convert span raw data to response", err)
 			zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
-			return *response, &zkErr
+			return response, &zkErr
 		}
 
-		return *response, nil
+		return response, nil
 	}
 
 	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)

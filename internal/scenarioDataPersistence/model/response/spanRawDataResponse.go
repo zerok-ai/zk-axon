@@ -23,8 +23,10 @@ type SpanRawDataDetails struct {
 	RespBody    string `json:"resp_body"`
 }
 
-func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (*SpanRawDataResponse, *error) {
+func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (SpanRawDataResponse, *error) {
 	respMap := make(map[string]SpanRawDataDetails, 0)
+	resp := SpanRawDataResponse{}
+
 	for _, v := range t {
 		var reqDecompressedStr, resDecompressedStr string
 		var err error
@@ -32,7 +34,7 @@ func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (*Sp
 			reqDecompressedStr, err = crypto.DecompressStringGzip(v.ReqBody)
 			if err != nil {
 				zkLogger.Error(LogTag, "error decompressing request payload", err)
-				return nil, &err
+				return resp, &err
 			}
 		}
 
@@ -40,7 +42,7 @@ func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (*Sp
 			resDecompressedStr, err = crypto.DecompressStringGzip(v.RespBody)
 			if err != nil {
 				zkLogger.Error(LogTag, "error decompressing response payload", err)
-				return nil, &err
+				return resp, &err
 			}
 		}
 
@@ -58,7 +60,6 @@ func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (*Sp
 		respMap[v.SpanID] = s
 	}
 
-	resp := SpanRawDataResponse{Spans: respMap}
-
-	return &resp, nil
+	resp.Spans = respMap
+	return resp, nil
 }
