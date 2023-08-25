@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "zk-axon.fullname" . }}-zk-axon
+  name: {{ include "zk-axon.fullname" . }}
   labels:
     app: zk-axon
   {{- include "zk-axon.labels" . | nindent 4 }}
@@ -23,12 +23,11 @@ spec:
           valueFrom:
             secretKeyRef:
               key: postgres-password
-              name: postgres-postgresql
+              name: postgres
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
-        image: {{ .Values.zkAxon.zkAxon.image.repository }}:{{ .Values.zkAxon.zkAxon.image.tag
-          | default .Chart.AppVersion }}
-        imagePullPolicy: {{ .Values.zkAxon.zkAxon.imagePullPolicy }}
+        image: "{{ .Values.global.dockerBase }}/{{ .Values.image.repo }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.imagePullPolicy }}
         name: zk-axon
         ports:
         - containerPort: 80
@@ -43,5 +42,5 @@ spec:
           name: config
       volumes:
       - configMap:
-          name: {{ include "zk-axon.fullname" . }}-zk-axon
+          name: {{ include "zk-axon.fullname" . }}
         name: config
