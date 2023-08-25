@@ -23,7 +23,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: postgres-password
-              name: postgres-postgresql
+              name: postgres
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
         image: "{{ .Values.global.dockerBase }}/{{ .Values.image.repo }}:{{ .Values.image.tag }}"
