@@ -120,6 +120,7 @@ func (t tracePersistenceHandler) GetScenarioDetailsHandler(ctx iris.Context) {
 func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 	issueHash := ctx.Params().Get(utils.IssueHash)
 
+	//R: To keep things consistent can we move this to validation.go?
 	if zkCommon.IsEmpty(issueHash) {
 		zkLogger.Error(LogTag, "IssueHash is empty in GetIssueDetailsHandler api")
 		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestIssueHashEmpty, nil)

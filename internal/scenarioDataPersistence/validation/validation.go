@@ -105,6 +105,7 @@ func ValidateGetIncidentDetailsApi(traceId, offset, limit string) *zkerrors.ZkEr
 
 func ValidateLimit(limit string) *zkerrors.ZkError {
 	if !zkCommon.IsEmpty(limit) {
+		//R: I think we can also check if limit is greater than 0.
 		_, err := strconv.Atoi(limit)
 		if err != nil {
 			zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorBadRequestLimitIsNotInteger, nil)
@@ -116,6 +117,7 @@ func ValidateLimit(limit string) *zkerrors.ZkError {
 
 func ValidateOffset(offset string) *zkerrors.ZkError {
 	if !zkCommon.IsEmpty(offset) {
+		//R: I think we can also check if offset is greater than 0.
 		_, err := strconv.Atoi(offset)
 		if err != nil {
 			zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorBadRequestLimitIsNotInteger, nil)

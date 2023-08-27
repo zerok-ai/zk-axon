@@ -58,6 +58,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 	var startTime time.Time
 	currentTime := time.Now().UTC()
 
+	//R: We should do this validation in the handler method along with other validations, and we can pass the duration to this method.
 	if duration, err := utils.ParseTimeString(st); err != nil {
 		zkLogger.Error(LogTag, "failed to parse time string", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
@@ -127,6 +128,8 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 	var startTime time.Time
 	currentTime := time.Now().UTC()
 
+	//R: We should do this validation in the handler method along with other validations, and we can pass the duration to this method.
+	//R: The same code is repeated above in GetIssueListWithDetailsService, we can move it to a common method.
 	if duration, err := utils.ParseTimeString(st); err != nil {
 		zkLogger.Error(LogTag, "failed to parse time string", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
@@ -169,6 +172,7 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 		}
 	}
 
+	//R: nil check is not required. Since len will be 0 even for nil array.
 	if scenarioIdList == nil || len(scenarioIdList) == 0 {
 		zkLogger.Error(LogTag, "scenario id list is empty after parsing")
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)

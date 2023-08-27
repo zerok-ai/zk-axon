@@ -142,6 +142,7 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, s
 func (z tracePersistenceRepo) GetScenarioDetailsRepo(scenarioId, serviceList pq.StringArray, st time.Time) ([]dto.ScenarioDetailsDto, error) {
 	var query string
 	var params []any
+	//R: nil is not required.
 	if serviceList == nil || len(serviceList) == 0 {
 		query = GetScenarioDetailsWithoutServiceNameFilter
 		params = []any{st, scenarioId}
