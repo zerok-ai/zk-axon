@@ -40,8 +40,10 @@ func main() {
 
 	configurator := iris.WithConfiguration(iris.Configuration{
 		DisablePathCorrection: true,
-		LogLevel:              "debug",
+		//R: This should come from config.
+		LogLevel: "debug",
 	})
+	//R: Catch and log the error in the below line.
 	app.Listen(":"+cfg.Server.Port, configurator)
 }
 
@@ -52,6 +54,8 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 
 		if ctx.Method() == iris.MethodOptions {
+			//R: I don't see Get in the below list. What is the list for? 
+			//R: We only have all Get Apis, why are we allowing all these other methods?
 			ctx.Header("Access-Control-Methods",
 				"POST, PUT, PATCH, DELETE")
 
@@ -61,6 +65,7 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 			ctx.Header("Access-Control-Max-Age",
 				"86400")
 
+			//R: What does this mean? Why are we setting status code here?
 			ctx.StatusCode(iris.StatusNoContent)
 			return
 		}
