@@ -54,7 +54,7 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 
 		if ctx.Method() == iris.MethodOptions {
-			//R: I don't see Get in the below list. What is the list for? 
+			//R: I don't see Get in the below list. What is the list for?
 			//R: We only have all Get Apis, why are we allowing all these other methods?
 			ctx.Header("Access-Control-Methods",
 				"POST, PUT, PATCH, DELETE")

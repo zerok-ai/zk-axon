@@ -91,6 +91,7 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 
 	resp, err := t.service.GetIssueListWithDetailsService(services, scenarioIds, st, l, o)
 
+	//R: We are sending rawResponse without check the http.Debug flag.
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueListWithDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
@@ -112,6 +113,7 @@ func (t tracePersistenceHandler) GetScenarioDetailsHandler(ctx iris.Context) {
 
 	resp, err := t.service.GetScenarioDetailsService(scenarioIds, services, st)
 
+	//R: We are sending rawResponse without check the http.Debug flag.
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.ScenarioDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
@@ -133,7 +135,7 @@ func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 	}
 
 	resp, err := t.service.GetIssueDetailsService(issueHash)
-
+	//R: We are sending rawResponse without check the http.Debug flag.
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IssueDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
@@ -158,7 +160,7 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 	o, _ := strconv.Atoi(offset)
 
 	resp, err := t.service.GetIncidentListService(issueHash, o, l)
-
+	//R: We are sending rawResponse without check the http.Debug flag.
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentIdListResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
@@ -185,7 +187,7 @@ func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
 	o, _ := strconv.Atoi(offset)
 
 	resp, err := t.service.GetIncidentDetailsService(traceId, spanId, o, l)
-
+	//R: We are sending rawResponse without check the http.Debug flag.
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.IncidentDetailsResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
@@ -206,7 +208,7 @@ func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
 	}
 
 	resp, err := t.service.GetSpanRawDataService(traceId, spanId)
-
+	//R: We are sending rawResponse without check the http.Debug flag.
 	zkHttpResponse := zkHttp.ToZkResponse[traceResponse.SpanRawDataResponse](200, resp, resp, err)
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)

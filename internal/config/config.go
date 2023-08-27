@@ -36,6 +36,7 @@ type RouterConfigs struct {
 }
 
 // AppConfigs is an application configuration structure
+// R: Many of  these configs are not used anymore. We can clean up them.
 type AppConfigs struct {
 	Postgres   zkPostgresConfig.PostgresConfig `yaml:"postgres"`
 	Server     ServerConfig                    `yaml:"server"`
@@ -47,6 +48,8 @@ type AppConfigs struct {
 	Greeting   string                          `env:"GREETING" env-description:"Greeting phrase" env-default:"Hello!"`
 	SuprSend   SuprSendConfig                  `yaml:"suprsend"`
 }
+
+//R: Unused code below. We can remove this.
 
 // Args command-line parameters
 type Args struct {

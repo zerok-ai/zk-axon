@@ -1,4 +1,4 @@
-//R: Move this to Makefile. We can keep all build and deploy scripts at one place.
+#R: Move this to Makefile. We can keep all build and deploy scripts at one place.
 
 LOCATION="us-west1"
 PROJECT_ID="zerok-dev"
