@@ -88,11 +88,13 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, s
 	var query string
 	var params []any
 
+	//R: Why don't we create and pass int32 int array as param for the method.
 	var scenarioListInt32 pq.Int32Array
 	for _, i := range scenarioList {
 		scenarioListInt32 = append(scenarioListInt32, int32(i))
 	}
 
+	//R: No need of first condition. nil array size will be returned as 0.
 	if serviceList == nil || len(serviceList) == 0 {
 		if scenarioListInt32 == nil || len(scenarioListInt32) == 0 {
 			query = GetIssueDetailsListWithoutServiceNameAndScenarioIdFilter
@@ -125,9 +127,11 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, s
 		err := rows.Scan(&rawData.TotalRows, &rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			s := strings.Join(serviceList, ",")
+			//R: Low priority: Why are we only printing service list here, why not scenarioId list?
 			zkLogger.Error(LogTag, fmt.Sprintf("service_list: %s", s), err)
+			//R: This error is not getting propagated to caller method. Is that okay?
 		}
-
+		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
 		data = append(data, rawData)
 	}
 
@@ -186,8 +190,9 @@ func (z tracePersistenceRepo) GetIssueDetails(issueHash string) ([]dto.IssueDeta
 		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("issue_hash: %s", issueHash), err)
+			//R: This error is not getting propagated to caller method. Is that okay?
 		}
-
+		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
 		data = append(data, rawData)
 	}
 
@@ -215,7 +220,9 @@ func (z tracePersistenceRepo) GetTraces(issueHash string, offset, limit int) ([]
 		err := rows.Scan(&rawData.TotalRows, &rawData.TraceId, &rawData.IssueHash, &rawData.IncidentCollectionTime, &rawData.EntryService, &rawData.EndPoint, &rawData.Protocol, &rawData.RootSpanTime, &rawData.LatencyNs)
 		if err != nil {
 			zkLogger.Error(LogTag, logMessage, err)
+			//R: This error is not getting propagated to caller method. Is that okay?
 		}
+		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
 		responseArr = append(responseArr, rawData)
 	}
 
@@ -272,7 +279,9 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string) ([]dto.Span
 		err := rows.Scan(&rawData.TraceID, &rawData.SpanID, &rawData.ReqHeaders, &rawData.RespHeaders, &rawData.IsTruncated, &rawData.ReqBody, &rawData.RespBody, &rawData.Protocol)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
+			//R: This error is not getting propagated to caller method. Is that okay?
 		}
+		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
 		data = append(data, rawData)
 	}
 

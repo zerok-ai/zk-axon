@@ -123,6 +123,7 @@ func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 	if zkCommon.IsEmpty(issueHash) {
 		zkLogger.Error(LogTag, "IssueHash is empty in GetIssueDetailsHandler api")
 		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsScenarioManager.ZkErrorBadRequestIssueHashEmpty, nil)
+		//R: I think the below four lines can be taken out and added into a utils method.
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
 		zkHttpResponse := z.WithZkErrorType(zkErr.Error).Build()
 		ctx.StatusCode(zkHttpResponse.Status)
@@ -144,6 +145,7 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 
 	if err := validation.ValidateIssueHashOffsetAndLimit(issueHash, offset, limit); err != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIncidentListHandler api", err)
+		//R: Can we add a utils method for this?
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
 		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
 		ctx.StatusCode(zkHttpResponse.Status)
@@ -162,6 +164,7 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 }
 
 func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
+	//R: The url path has issueHash, but we are not reading it here. What is the need of adding that?
 	traceId := ctx.Params().Get(utils.IncidentId)
 	spanId := ctx.URLParam(utils.SpanIdQueryParam)
 	limit := ctx.URLParamDefault(utils.LimitQueryParam, "50")
@@ -169,6 +172,7 @@ func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
 
 	if err := validation.ValidateGetIncidentDetailsApi(traceId, offset, limit); err != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIncidentDetailsHandler api", err)
+		//R: Can we move this to utils method?
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
 		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
 		ctx.StatusCode(zkHttpResponse.Status)
@@ -187,10 +191,12 @@ func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
 }
 
 func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
+	//R: We are not reading issueHash here.
 	traceId := ctx.Params().Get(utils.IncidentId)
 	spanId := ctx.Params().Get(utils.SpanId)
 	if err := validation.ValidateGetSpanRawDataApi(traceId, spanId); err != nil {
 		zkLogger.Error(LogTag, "Error while validating GetSpanRawDataHandler api", err)
+		//R: Can be moved to utils.
 		z := &zkHttp.ZkHttpResponseBuilder[any]{}
 		zkHttpResponse := z.WithZkErrorType(err.Error).Build()
 		ctx.StatusCode(zkHttpResponse.Status)

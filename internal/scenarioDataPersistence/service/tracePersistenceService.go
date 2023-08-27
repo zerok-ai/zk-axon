@@ -62,7 +62,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 		zkLogger.Error(LogTag, "failed to parse time string", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		return response, &zkErr
-	} else if currentTime.Add(duration).After(currentTime) {
+	} else if currentTime.Add(duration).After(currentTime) { //R: What is the condition that we are using here?
 		zkLogger.Error(LogTag, "time string is not negative", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeNotNegative, nil)
 		return response, &zkErr
@@ -104,6 +104,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 		}
 	}
 
+	//R: This looks like generic validation. Can we move this to a utils method?
 	if offset < 0 || limit < 1 {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
@@ -201,6 +202,7 @@ func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (trace
 
 func (s tracePersistenceService) GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentIdListResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentIdListResponse
+	//R: Can we add a utils method for this?
 	if offset < 0 || limit < 1 {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
@@ -220,6 +222,7 @@ func (s tracePersistenceService) GetIncidentListService(issueHash string, offset
 
 func (s tracePersistenceService) GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentDetailsResponse
+	//R: Can we moved to a utils method.
 	if offset < 0 || limit < 1 {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
