@@ -106,6 +106,8 @@ func ValidateGetIncidentDetailsApi(traceId, offset, limit string) *zkerrors.ZkEr
 func ValidateLimit(limit string) *zkerrors.ZkError {
 	if !zkCommon.IsEmpty(limit) {
 		//R: I think we can also check if limit is greater than 0.
+		//R: Can we also add max number for limit, if the dashboard or a bad actor sends a very high limit,
+		//then it might end up crashing the service.
 		_, err := strconv.Atoi(limit)
 		if err != nil {
 			zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorBadRequestLimitIsNotInteger, nil)

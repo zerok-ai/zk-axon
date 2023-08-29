@@ -129,6 +129,7 @@ func ConvertIssueDetailsDtoToIssueDetails(v dto.IssueDetailsDto) IssueDetails {
 	r.Velocity = float32(v.TotalCount / hours)
 	r.FirstSeen = v.FirstSeen
 	r.LastSeen = v.LastSeen
+	//R: As discussed, can we can this max limit of 5 in the query or in the repo?
 	if len(v.Incidents) >= 5 {
 		r.Incidents = v.Incidents[:5]
 	} else {
@@ -163,6 +164,7 @@ func ConvertScenarioDetailsDtoToScenarioDetailsDetailsResponse(v dto.ScenarioDet
 	r.FirstSeen = v.FirstSeen
 	r.LastSeen = v.LastSeen
 
+	//R: As discussed, can we can this max limit of 5 in the query or in the repo?
 	if len(v.Sources) >= 5 {
 		r.Sources = v.Sources[:5]
 	} else {
