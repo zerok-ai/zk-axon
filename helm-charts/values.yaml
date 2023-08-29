@@ -1,38 +1,34 @@
+
+global:
+  dockerBase: "us-west1-docker.pkg.dev/zerok-dev/zk-client"
+
 kubernetesClusterDomain: cluster.local
 zkAxon:
-  configYaml: |-
-    server:
-      host: localhost
-      port: 80
-    logs:
-      color: true
-      level: DEBUG
-    http:
-      debug: true
-    postgres:
-      host: postgres-postgresql.zk-client.svc.cluster.local
-      port: 5432
-      user: "postgres"
-      password: "pl"
-      dbname: "pl"
-      max_connections: 5
-      max_idle_connections: 5
-      connection_max_lifetime_in_minutes: 10
   ports:
   - port: 80
     protocol: TCP
     targetPort: 0
   replicas: 1
   type: ClusterIP
-  zkAxon:
-    image:
-      repository: us-west1-docker.pkg.dev/zerok-dev/zk-axon/zk-axon
-      tag: dev
-    imagePullPolicy: Always
-    resources:
-      limits:
-        cpu: 200m
-        memory: 128Mi
-      requests:
-        cpu: 100m
-        memory: 64Mi
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+postgres:
+  host: "postgres.zk-client.svc.cluster.local"
+  port: 5432
+  password: ""
+  database: "pl"
+  user: "postgres"
+  max_connections: 5
+  max_idle_connections: 5
+  connection_max_lifetime_in_minutes: 10
+
+image:
+  repo: "zk-axon"
+  tag: latest
+  imagePullPolicy: Always
