@@ -14,24 +14,34 @@ import (
 const (
 
 	//R: Not sure if this helps, but I see In most of the queries we have join on trace_id, issue_hash. Will doing any indexing help in query performance?
+	// we already have pk on trace and issue_hash so they should be fine for query.
 
 	//R: Can we add scenarioId condition before doing the join?
+	// we are not sure about the query performance, so we keep it as it is. Once we have some data and bandwidth, we can do some performance test. This includes the query plan the also splitting complex queries into multiple queries.
+	// we do not know whether this will be automatically optimized by the engine or not. creating a subquery will also create a temp table in memory.
 	GetIssueDetailsListWithoutServiceNameAndScenarioIdFilter     = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC) AS TEMP) incidents FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $2) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version ORDER BY last_seen DESC LIMIT $3 OFFSET $4"
 	GetIssueDetailsListWithoutServiceNameAndWithScenarioIdFilter = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC) AS TEMP) incidents FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $2) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($3) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version ORDER BY last_seen DESC LIMIT $4 OFFSET $5"
 	GetIssueDetailsWithServiceNameAndWithoutScenarioIdListFilter = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC) AS TEMP) incidents FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $2 AND (SOURCE = ANY($3) OR destination = ANY($4))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version ORDER BY last_seen DESC LIMIT $5 OFFSET $6"
 	GetIssueDetailsListWithServiceNameAndScenarioIdFilter        = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC) AS TEMP) incidents FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $2 AND (SOURCE = ANY($3) OR destination = ANY($4))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($5) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version ORDER BY last_seen DESC LIMIT $6 OFFSET $7"
 	//R: Can we move the condition scenario_id=ANY($2) into a sub query on issue table before doing the join? For both the querys below.
-	GetScenarioDetailsWithoutServiceNameFilter = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($2) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
-	GetScenarioDetailsWithServiceNameFilter    = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1 AND (SOURCE = ANY($2) OR destination = ANY($3))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($4) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
+	// we are not sure about the query performance, so we keep it as it is. Once we have some data and bandwidth, we can do some performance test. This includes the query plan the also splitting complex queries into multiple queries.
+	// we do not know whether this will be automatically optimized by the engine or not. creating a subquery will also create a temp table in memory.
+	GetScenarioDetailsWithoutServiceNameFilter = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($2) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
+	GetScenarioDetailsWithServiceNameFilter    = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1 AND (SOURCE = ANY($2) OR destination = ANY($3))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($4) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
 	//R: We are joining incident with span twice. Can we simplify the query by doing this only once?
+	// as discussed, other ways didn't work so keeping it as is
 	GetIssueDetailsByIssueHash = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC)  AS TEMP) incidents FROM (SELECT * FROM issue WHERE issue_hash = $1) AS issue INNER JOIN incident USING(issue_hash) INNER JOIN (SELECT trace_id, issue_hash_list, source, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL) AS s USING(trace_id) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version"
 	GetTraceQuery              = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, incident.trace_id, issue_hash, incident_collection_time, SOURCE, path, protocol, start_time, latency FROM incident INNER JOIN span USING(trace_id) WHERE issue_hash=$2 AND is_root=$3 ORDER BY incident_collection_time DESC LIMIT $4 OFFSET $5"
 	//R: Why is only 'METHOD' in caps?
-	GetSpanQueryUsingTraceId = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, SOURCE, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, METHOD, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3"
+	// Typo: done
+	GetSpanQueryUsingTraceId = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, METHOD, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3"
 	//R: Why are we not applying limit and offset here?
-	GetSpanQueryUsingTraceIdAndSpanId = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, SOURCE, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, METHOD, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 AND span_id=$2"
+	// It will only return 1 row
+	GetSpanQueryUsingTraceIdAndSpanId = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, SOURCE, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 AND span_id=$2"
 	GetSpanRawDataQuery               = "SELECT span.trace_id, span.span_id, req_headers, resp_headers, is_truncated, req_body, resp_body, protocol FROM span_raw_data INNER JOIN span USING(span_id) WHERE span.trace_id=$1 AND span.span_id=$2"
 	//R: Can we apply the condition 'issue.scenario_id = $2 AND span.is_root=$3 AND issue.issue_hash=$4' before the join?
+	// we are not sure about the query performance, so we keep it as it is. Once we have some data and bandwidth, we can do some performance test. This includes the query plan the also splitting complex queries into multiple queries.
+	// we do not know whether this will be automatically optimized by the engine or not. creating a subquery will also create a temp table in memory.
 	GetTraceQueryByScenarioId                       = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3 AND issue.issue_hash=$4) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $5 OFFSET $6"
 	GetTraceQueryByScenarioIdWithoutIssueHashFilter = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $4 OFFSET $5"
 )
@@ -98,13 +108,15 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, s
 	var params []any
 
 	//R: Why don't we create and pass int32 int array as param for the method.
+	// postgres does not support int array for query. So we are using pq.Int32Array
 	var scenarioListInt32 pq.Int32Array
 	for _, i := range scenarioList {
 		scenarioListInt32 = append(scenarioListInt32, int32(i))
 	}
 
 	//R: No need of first condition. nil array size will be returned as 0.
-	if serviceList == nil || len(serviceList) == 0 {
+	// done
+	if len(serviceList) == 0 {
 		if scenarioListInt32 == nil || len(scenarioListInt32) == 0 {
 			query = GetIssueDetailsListWithoutServiceNameAndScenarioIdFilter
 			params = []any{true, st, limit, offset}
@@ -135,12 +147,28 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, s
 		var rawData dto.IssueDetailsDto
 		err := rows.Scan(&rawData.TotalRows, &rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
-			s := strings.Join(serviceList, ",")
 			//R: Low priority: Why are we only printing service list here, why not scenarioId list?
-			zkLogger.Error(LogTag, fmt.Sprintf("service_list: %s", s), err)
+			// updated the error log
+			zkLogger.Error(LogTag, "error in iteration issueDetails rows", err)
+			continue
 			//R: This error is not getting propagated to caller method. Is that okay?
+			// I am logging it here and letting the api not fail. Do you think we should fail the api or handle it in a different way?
 		}
+
+		if len(rawData.Incidents) > 5 {
+			rawData.Incidents = rawData.Incidents[:5]
+		}
+
+		if len(rawData.Sources) > 5 {
+			rawData.Sources = rawData.Sources[:5]
+		}
+
+		if len(rawData.Destinations) > 5 {
+			rawData.Destinations = rawData.Destinations[:5]
+		}
+
 		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
+		// added continue in case of error
 		data = append(data, rawData)
 	}
 
@@ -152,7 +180,8 @@ func (z tracePersistenceRepo) GetScenarioDetailsRepo(scenarioId, serviceList pq.
 	var query string
 	var params []any
 	//R: nil is not required.
-	if serviceList == nil || len(serviceList) == 0 {
+	// done
+	if len(serviceList) == 0 {
 		query = GetScenarioDetailsWithoutServiceNameFilter
 		params = []any{st, scenarioId}
 	} else {
@@ -177,6 +206,15 @@ func (z tracePersistenceRepo) GetScenarioDetailsRepo(scenarioId, serviceList pq.
 			s := strings.Join(serviceList, ",")
 			sc := strings.Join(scenarioId, ",")
 			zkLogger.Error(LogTag, fmt.Sprintf("service_list: %s, scenario_id_list: %s", s, sc), err)
+			continue
+		}
+
+		if len(rawData.Sources) > 5 {
+			rawData.Sources = rawData.Sources[:5]
+		}
+
+		if len(rawData.Destinations) > 5 {
+			rawData.Destinations = rawData.Destinations[:5]
 		}
 
 		data = append(data, rawData)
@@ -200,9 +238,13 @@ func (z tracePersistenceRepo) GetIssueDetails(issueHash string) ([]dto.IssueDeta
 		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("issue_hash: %s", issueHash), err)
+			continue
 			//R: This error is not getting propagated to caller method. Is that okay?
+			// I am logging it here and letting the api not fail. Do you think we should fail the api or handle it in a different way?
+
 		}
 		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
+		// added continue in case of error
 		data = append(data, rawData)
 	}
 
@@ -231,8 +273,11 @@ func (z tracePersistenceRepo) GetTraces(issueHash string, offset, limit int) ([]
 		if err != nil {
 			zkLogger.Error(LogTag, logMessage, err)
 			//R: This error is not getting propagated to caller method. Is that okay?
+			// I am logging it here and letting the api not fail. Do you think we should fail the api or handle it in a different way?
+			continue
 		}
 		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
+		// added continue in case of error
 		responseArr = append(responseArr, rawData)
 	}
 
@@ -290,8 +335,13 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string) ([]dto.Span
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
 			//R: This error is not getting propagated to caller method. Is that okay?
+			// I am logging it here and letting the api not fail. Do you think we should fail the api or handle it in a different way?
+
+			continue
 		}
 		//R: Adding rawData in data, even when err!=nil. We should either keep this in else condition or throw an error when err!=nil.
+		// added continue in case of error
+
 		data = append(data, rawData)
 	}
 

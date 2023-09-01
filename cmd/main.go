@@ -41,10 +41,14 @@ func main() {
 	configurator := iris.WithConfiguration(iris.Configuration{
 		DisablePathCorrection: true,
 		//R: This should come from config.
-		LogLevel: "debug",
+		//R: Resolved
+		LogLevel: cfg.LogsConfig.Level,
 	})
 	//R: Catch and log the error in the below line.
-	app.Listen(":"+cfg.Server.Port, configurator)
+	//R: Resolved
+	if err = app.Listen(":"+cfg.Server.Port, configurator); err != nil {
+		panic(err)
+	}
 }
 
 func newApp(tph handler.TracePersistenceHandler) *iris.Application {
@@ -56,8 +60,9 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 		if ctx.Method() == iris.MethodOptions {
 			//R: I don't see Get in the below list. What is the list for?
 			//R: We only have all Get Apis, why are we allowing all these other methods?
-			ctx.Header("Access-Control-Methods",
-				"POST, PUT, PATCH, DELETE")
+			//ctx.Header("Access-Control-Methods",
+			//	"POST, PUT, PATCH, DELETE")
+			// Removed this, will test it soon
 
 			ctx.Header("Access-Control-Allow-Headers",
 				"Access-Control-Allow-Origin,Content-Type")
@@ -66,6 +71,9 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 				"86400")
 
 			//R: What does this mean? Why are we setting status code here?
+			// This is what GPT says:
+			//In CORS, a successful preflight request should typically result in a response with a 204 status code to indicate that the request is allowed.
+			//The response body is empty (no content)
 			ctx.StatusCode(iris.StatusNoContent)
 			return
 		}

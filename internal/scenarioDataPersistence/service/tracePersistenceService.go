@@ -36,10 +36,9 @@ type tracePersistenceService struct {
 
 func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId, issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentDetailListResponse
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.GetTracesForScenarioId(scenarioId, issueHash, limit, offset)
@@ -56,19 +55,16 @@ func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId,
 func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenarioIds, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IssueListWithDetailsResponse
 	var startTime time.Time
-	currentTime := time.Now().UTC()
 
 	//R: We should do this validation in the handler method along with other validations, and we can pass the duration to this method.
-	if duration, err := utils.ParseTimeString(st); err != nil {
-		zkLogger.Error(LogTag, "failed to parse time string", err)
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		return response, &zkErr
-	} else if currentTime.Add(duration).After(currentTime) { //R: What is the condition that we are using here?
-		zkLogger.Error(LogTag, "time string is not negative", err)
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeNotNegative, nil)
-		return response, &zkErr
+	// My idea was to only validation the syntactic parts in handler and actual business logic in service layer.
+
+	// My idea was to only validation the syntactic parts in handler and actual business logic in service layer.
+	// Done
+	if t, zkErr := getStartTime(st); zkErr != nil {
+		return response, zkErr
 	} else {
-		startTime = currentTime.Add(duration)
+		startTime = t
 	}
 
 	var serviceList []string
@@ -106,10 +102,9 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 	}
 
 	//R: This looks like generic validation. Can we move this to a utils method?
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+	//Done
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.IssueListDetailsRepo(serviceList, scenarioIdList, limit, offset, startTime)
@@ -123,23 +118,38 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 	return response, &zkErr
 }
 
-func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services, st string) (traceResponse.ScenarioDetailsResponse, *zkErrors.ZkError) {
-	var response traceResponse.ScenarioDetailsResponse
-	var startTime time.Time
+func getStartTime(st string) (time.Time, *zkErrors.ZkError) {
+	var t time.Time
 	currentTime := time.Now().UTC()
 
-	//R: We should do this validation in the handler method along with other validations, and we can pass the duration to this method.
-	//R: The same code is repeated above in GetIssueListWithDetailsService, we can move it to a common method.
 	if duration, err := utils.ParseTimeString(st); err != nil {
 		zkLogger.Error(LogTag, "failed to parse time string", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		return response, &zkErr
+		return t, &zkErr
 	} else if currentTime.Add(duration).After(currentTime) {
 		zkLogger.Error(LogTag, "time string is not negative", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeNotNegative, nil)
-		return response, &zkErr
+		return t, &zkErr
 	} else {
-		startTime = currentTime.Add(duration)
+		t = currentTime.Add(duration)
+	}
+
+	return t, nil
+}
+
+func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services, st string) (traceResponse.ScenarioDetailsResponse, *zkErrors.ZkError) {
+	var response traceResponse.ScenarioDetailsResponse
+	var startTime time.Time
+
+	//R: We should do this validation in the handler method along with other validations, and we can pass the duration to this method.
+	// My idea was to only validation the syntactic parts in handler and actual business logic in service layer.
+
+	//R: The same code is repeated above in GetIssueListWithDetailsService, we can move it to a common method.
+	// Done
+	if t, zkErr := getStartTime(st); zkErr != nil {
+		return response, zkErr
+	} else {
+		startTime = t
 	}
 
 	var serviceList []string
@@ -156,7 +166,7 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 		}
 	}
 
-	var scenarioIdList []string
+	scenarioIdList := make([]string, 0)
 	if zkUtils.IsEmpty(scenarioIds) {
 		zkLogger.Error(LogTag, "scenario id list is empty")
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
@@ -173,7 +183,8 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 	}
 
 	//R: nil check is not required. Since len will be 0 even for nil array.
-	if scenarioIdList == nil || len(scenarioIdList) == 0 {
+	// Done
+	if len(scenarioIdList) == 0 {
 		zkLogger.Error(LogTag, "scenario id list is empty after parsing")
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
 		return response, &zkErr
@@ -207,10 +218,9 @@ func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (trace
 func (s tracePersistenceService) GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentIdListResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentIdListResponse
 	//R: Can we add a utils method for this?
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+	//Done
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.GetTraces(issueHash, offset, limit)
@@ -227,10 +237,9 @@ func (s tracePersistenceService) GetIncidentListService(issueHash string, offset
 func (s tracePersistenceService) GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentDetailsResponse
 	//R: Can we moved to a utils method.
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+	//Done
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.GetSpans(traceId, spanId, offset, limit)
