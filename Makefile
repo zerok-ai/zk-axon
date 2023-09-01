@@ -47,4 +47,5 @@ coverage_html:
 	go tool cover -html=coverage.out
 
 # ------- CI-CD ------------
-ci-cd-build: build
+ci-cd-build: sync
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -o $(NAME) cmd/main.go
