@@ -13,7 +13,7 @@ sync:
 	go get -v ./...
 
 build: sync
-	go build -v -o $(NAME) cmd/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o $(NAME) cmd/main.go
 
 docker-build: sync
 	CGO_ENABLED=0 GOOS=linux $(ARCH) go build -v -o $(NAME) cmd/main.go
@@ -46,3 +46,5 @@ coverage_html:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
 
+# ------- CI-CD ------------
+ci-cd-build: build

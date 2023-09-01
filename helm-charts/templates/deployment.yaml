@@ -18,15 +18,7 @@ spec:
       {{- include "zk-axon.selectorLabels" . | nindent 8 }}
     spec:
       containers:
-      - env:
-        - name: PL_POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: postgres-password
-              name: postgres
-        - name: KUBERNETES_CLUSTER_DOMAIN
-          value: {{ quote .Values.kubernetesClusterDomain }}
-        image: "{{ .Values.global.dockerBase }}/{{ .Values.image.repo }}:{{ .Values.image.tag }}"
+      - image: "{{ .Values.global.dockerBase }}/{{ .Values.image.repo }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.imagePullPolicy }}
         name: zk-axon
         ports:
@@ -36,10 +28,18 @@ spec:
             path: /healthz
             port: 80
           successThreshold: 3
-        resources: {{- toYaml .Values.zkAxon.zkAxon.resources | nindent 10 }}
+        resources: {{- toYaml .Values.zkAxon.resources | nindent 10 }}
         volumeMounts:
         - mountPath: /zk/config
           name: config
+        env:
+          - name: PL_POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: postgres-password
+                name: postgres
+          - name: KUBERNETES_CLUSTER_DOMAIN
+            value: {{ quote .Values.kubernetesClusterDomain }}
       volumes:
       - configMap:
           name: {{ include "zk-axon.fullname" . }}

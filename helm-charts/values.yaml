@@ -10,14 +10,13 @@ zkAxon:
     targetPort: 0
   replicas: 1
   type: ClusterIP
-  zkAxon:
-    resources:
-      limits:
-        cpu: 200m
-        memory: 128Mi
-      requests:
-        cpu: 100m
-        memory: 64Mi
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
 
 postgres:
   host: "postgres.zk-client.svc.cluster.local"
