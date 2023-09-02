@@ -1,5 +1,5 @@
 FROM golang:1.18-alpine
 WORKDIR /zk
-COPY zk-axon .
+COPY zk-axon /zk/zk-axon
 CMD ["/zk/zk-axon", "-c", "/zk/config/config.yaml"]
 
