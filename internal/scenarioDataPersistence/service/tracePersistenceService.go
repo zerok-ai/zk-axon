@@ -36,10 +36,9 @@ type tracePersistenceService struct {
 
 func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId, issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentDetailListResponse
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.GetTracesForScenarioId(scenarioId, issueHash, limit, offset)
@@ -56,18 +55,11 @@ func (s tracePersistenceService) GetIncidentListServiceForScenarioId(scenarioId,
 func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenarioIds, st string, limit, offset int) (traceResponse.IssueListWithDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IssueListWithDetailsResponse
 	var startTime time.Time
-	currentTime := time.Now().UTC()
 
-	if duration, err := utils.ParseTimeString(st); err != nil {
-		zkLogger.Error(LogTag, "failed to parse time string", err)
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		return response, &zkErr
-	} else if currentTime.Add(duration).After(currentTime) {
-		zkLogger.Error(LogTag, "time string is not negative", err)
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeNotNegative, nil)
-		return response, &zkErr
+	if t, zkErr := getStartTime(st); zkErr != nil {
+		return response, zkErr
 	} else {
-		startTime = currentTime.Add(duration)
+		startTime = t
 	}
 
 	var serviceList []string
@@ -84,7 +76,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 		}
 	}
 
-	var scenarioIdList []int
+	var scenarioIdList []int32
 	if zkUtils.IsEmpty(scenarioIds) {
 		zkLogger.Info(LogTag, "scenarioIds list is empty")
 	} else {
@@ -100,14 +92,12 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 				zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdNotInteger, nil)
 				return response, &zkErr
 			}
-			scenarioIdList = append(scenarioIdList, i)
+			scenarioIdList = append(scenarioIdList, int32(i))
 		}
 	}
 
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.IssueListDetailsRepo(serviceList, scenarioIdList, limit, offset, startTime)
@@ -121,21 +111,33 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 	return response, &zkErr
 }
 
-func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services, st string) (traceResponse.ScenarioDetailsResponse, *zkErrors.ZkError) {
-	var response traceResponse.ScenarioDetailsResponse
-	var startTime time.Time
+func getStartTime(st string) (time.Time, *zkErrors.ZkError) {
+	var t time.Time
 	currentTime := time.Now().UTC()
 
 	if duration, err := utils.ParseTimeString(st); err != nil {
 		zkLogger.Error(LogTag, "failed to parse time string", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		return response, &zkErr
+		return t, &zkErr
 	} else if currentTime.Add(duration).After(currentTime) {
 		zkLogger.Error(LogTag, "time string is not negative", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestStartTimeNotNegative, nil)
-		return response, &zkErr
+		return t, &zkErr
 	} else {
-		startTime = currentTime.Add(duration)
+		t = currentTime.Add(duration)
+	}
+
+	return t, nil
+}
+
+func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services, st string) (traceResponse.ScenarioDetailsResponse, *zkErrors.ZkError) {
+	var response traceResponse.ScenarioDetailsResponse
+	var startTime time.Time
+
+	if t, zkErr := getStartTime(st); zkErr != nil {
+		return response, zkErr
+	} else {
+		startTime = t
 	}
 
 	var serviceList []string
@@ -152,7 +154,7 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 		}
 	}
 
-	var scenarioIdList []string
+	scenarioIdList := make([]string, 0)
 	if zkUtils.IsEmpty(scenarioIds) {
 		zkLogger.Error(LogTag, "scenario id list is empty")
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
@@ -168,7 +170,7 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 		}
 	}
 
-	if scenarioIdList == nil || len(scenarioIdList) == 0 {
+	if len(scenarioIdList) == 0 {
 		zkLogger.Error(LogTag, "scenario id list is empty after parsing")
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
 		return response, &zkErr
@@ -201,10 +203,9 @@ func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (trace
 
 func (s tracePersistenceService) GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentIdListResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentIdListResponse
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.GetTraces(issueHash, offset, limit)
@@ -220,10 +221,9 @@ func (s tracePersistenceService) GetIncidentListService(issueHash string, offset
 
 func (s tracePersistenceService) GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentDetailsResponse
-	if offset < 0 || limit < 1 {
-		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
-		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)
-		return response, &zkErr
+
+	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
+		return response, zkErr
 	}
 
 	data, err := s.repo.GetSpans(traceId, spanId, offset, limit)

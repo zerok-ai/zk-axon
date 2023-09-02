@@ -16,12 +16,12 @@ const (
 	GetIssueDetailsListWithoutServiceNameAndWithScenarioIdFilter = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC) AS TEMP) incidents FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $2) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($3) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version ORDER BY last_seen DESC LIMIT $4 OFFSET $5"
 	GetIssueDetailsWithServiceNameAndWithoutScenarioIdListFilter = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC) AS TEMP) incidents FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $2 AND (SOURCE = ANY($3) OR destination = ANY($4))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version ORDER BY last_seen DESC LIMIT $5 OFFSET $6"
 	GetIssueDetailsListWithServiceNameAndScenarioIdFilter        = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC) AS TEMP) incidents FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $2 AND (SOURCE = ANY($3) OR destination = ANY($4))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($5) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version ORDER BY last_seen DESC LIMIT $6 OFFSET $7"
-	GetScenarioDetailsWithoutServiceNameFilter                   = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($2) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
-	GetScenarioDetailsWithServiceNameFilter                      = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(SOURCE)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1 AND (SOURCE = ANY($2) OR destination = ANY($3))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($4) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
+	GetScenarioDetailsWithoutServiceNameFilter                   = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($2) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
+	GetScenarioDetailsWithServiceNameFilter                      = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1 AND (SOURCE = ANY($2) OR destination = ANY($3))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($4) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
 	GetIssueDetailsByIssueHash                                   = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC)  AS TEMP) incidents FROM (SELECT * FROM issue WHERE issue_hash = $1) AS issue INNER JOIN incident USING(issue_hash) INNER JOIN (SELECT trace_id, issue_hash_list, source, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL) AS s USING(trace_id) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version"
 	GetTraceQuery                                                = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, incident.trace_id, issue_hash, incident_collection_time, SOURCE, path, protocol, start_time, latency FROM incident INNER JOIN span USING(trace_id) WHERE issue_hash=$2 AND is_root=$3 ORDER BY incident_collection_time DESC LIMIT $4 OFFSET $5"
-	GetSpanQueryUsingTraceId                                     = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, SOURCE, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, METHOD, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3"
-	GetSpanQueryUsingTraceIdAndSpanId                            = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, SOURCE, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, METHOD, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 AND span_id=$2"
+	GetSpanQueryUsingTraceId                                     = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3"
+	GetSpanQueryUsingTraceIdAndSpanId                            = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username FROM span WHERE trace_id=$1 AND span_id=$2"
 	GetSpanRawDataQuery                                          = "SELECT span.trace_id, span.span_id, req_headers, resp_headers, is_truncated, req_body, resp_body, protocol FROM span_raw_data INNER JOIN span ON span.span_id = span_raw_data.span_id AND span.trace_id = span_raw_data.trace_id WHERE span.trace_id=$1 AND span.span_id=$2"
 	GetTraceQueryByScenarioId                                    = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3 AND issue.issue_hash=$4) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $5 OFFSET $6"
 	GetTraceQueryByScenarioIdWithoutIssueHashFilter              = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $4 OFFSET $5"
@@ -30,7 +30,7 @@ const (
 var LogTag = "zk_trace_persistence_repo"
 
 type TracePersistenceRepo interface {
-	IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error)
+	IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int32, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error)
 	GetScenarioDetailsRepo(scenarioId, serviceList pq.StringArray, st time.Time) ([]dto.ScenarioDetailsDto, error)
 	GetIssueDetails(issueHash string) ([]dto.IssueDetailsDto, error)
 	GetTraces(issueHash string, offset, limit int) ([]dto.IncidentTableDto, error)
@@ -84,30 +84,25 @@ func NewTracePersistenceRepo(dbRepo sqlDB.DatabaseRepo) TracePersistenceRepo {
 	return &tracePersistenceRepo{dbRepo: dbRepo}
 }
 
-func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error) {
+func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int32, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error) {
 	var query string
 	var params []any
 
-	var scenarioListInt32 pq.Int32Array
-	for _, i := range scenarioList {
-		scenarioListInt32 = append(scenarioListInt32, int32(i))
-	}
-
-	if serviceList == nil || len(serviceList) == 0 {
-		if scenarioListInt32 == nil || len(scenarioListInt32) == 0 {
+	if len(serviceList) == 0 {
+		if scenarioList == nil || len(scenarioList) == 0 {
 			query = GetIssueDetailsListWithoutServiceNameAndScenarioIdFilter
 			params = []any{true, st, limit, offset}
 		} else {
 			query = GetIssueDetailsListWithoutServiceNameAndWithScenarioIdFilter
-			params = []any{true, st, scenarioListInt32, limit, offset}
+			params = []any{true, st, scenarioList, limit, offset}
 		}
 	} else {
-		if scenarioListInt32 == nil || len(scenarioListInt32) == 0 {
+		if len(scenarioList) == 0 {
 			query = GetIssueDetailsWithServiceNameAndWithoutScenarioIdListFilter
 			params = []any{true, st, serviceList, serviceList, limit, offset}
 		} else {
 			query = GetIssueDetailsListWithServiceNameAndScenarioIdFilter
-			params = []any{true, st, serviceList, serviceList, scenarioListInt32, limit, offset}
+			params = []any{true, st, serviceList, serviceList, scenarioList, limit, offset}
 		}
 	}
 
@@ -124,8 +119,20 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, s
 		var rawData dto.IssueDetailsDto
 		err := rows.Scan(&rawData.TotalRows, &rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
-			s := strings.Join(serviceList, ",")
-			zkLogger.Error(LogTag, fmt.Sprintf("service_list: %s", s), err)
+			zkLogger.Error(LogTag, "error in iteration issueDetails rows", err)
+			continue
+		}
+
+		if len(rawData.Incidents) > 5 {
+			rawData.Incidents = rawData.Incidents[:5]
+		}
+
+		if len(rawData.Sources) > 5 {
+			rawData.Sources = rawData.Sources[:5]
+		}
+
+		if len(rawData.Destinations) > 5 {
+			rawData.Destinations = rawData.Destinations[:5]
 		}
 
 		data = append(data, rawData)
@@ -138,7 +145,8 @@ func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, s
 func (z tracePersistenceRepo) GetScenarioDetailsRepo(scenarioId, serviceList pq.StringArray, st time.Time) ([]dto.ScenarioDetailsDto, error) {
 	var query string
 	var params []any
-	if serviceList == nil || len(serviceList) == 0 {
+
+	if len(serviceList) == 0 {
 		query = GetScenarioDetailsWithoutServiceNameFilter
 		params = []any{st, scenarioId}
 	} else {
@@ -163,6 +171,15 @@ func (z tracePersistenceRepo) GetScenarioDetailsRepo(scenarioId, serviceList pq.
 			s := strings.Join(serviceList, ",")
 			sc := strings.Join(scenarioId, ",")
 			zkLogger.Error(LogTag, fmt.Sprintf("service_list: %s, scenario_id_list: %s", s, sc), err)
+			continue
+		}
+
+		if len(rawData.Sources) > 5 {
+			rawData.Sources = rawData.Sources[:5]
+		}
+
+		if len(rawData.Destinations) > 5 {
+			rawData.Destinations = rawData.Destinations[:5]
 		}
 
 		data = append(data, rawData)
@@ -186,8 +203,8 @@ func (z tracePersistenceRepo) GetIssueDetails(issueHash string) ([]dto.IssueDeta
 		err := rows.Scan(&rawData.IssueHash, &rawData.IssueTitle, &rawData.ScenarioId, &rawData.ScenarioVersion, &rawData.Sources, &rawData.Destinations, &rawData.TotalCount, &rawData.FirstSeen, &rawData.LastSeen, &rawData.Incidents)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("issue_hash: %s", issueHash), err)
+			continue
 		}
-
 		data = append(data, rawData)
 	}
 
@@ -215,6 +232,7 @@ func (z tracePersistenceRepo) GetTraces(issueHash string, offset, limit int) ([]
 		err := rows.Scan(&rawData.TotalRows, &rawData.TraceId, &rawData.IssueHash, &rawData.IncidentCollectionTime, &rawData.EntryService, &rawData.EndPoint, &rawData.Protocol, &rawData.RootSpanTime, &rawData.LatencyNs)
 		if err != nil {
 			zkLogger.Error(LogTag, logMessage, err)
+			continue
 		}
 		responseArr = append(responseArr, rawData)
 	}
@@ -272,7 +290,9 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string) ([]dto.Span
 		err := rows.Scan(&rawData.TraceID, &rawData.SpanID, &rawData.ReqHeaders, &rawData.RespHeaders, &rawData.IsTruncated, &rawData.ReqBody, &rawData.RespBody, &rawData.Protocol)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
+			continue
 		}
+
 		data = append(data, rawData)
 	}
 

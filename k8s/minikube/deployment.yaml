@@ -42,6 +42,6 @@ spec:
           env: # Setting Enviornmental Variables
             - name: PL_POSTGRES_PASSWORD # Setting Database password from Secret
               valueFrom:
-                secretKeyRef:
+                secretKeyRef: #R: Do we need permissecret permission for the
                   name: postgres-postgresql
                   key: postgres-password

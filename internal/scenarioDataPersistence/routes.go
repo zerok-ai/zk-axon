@@ -11,10 +11,11 @@ func Initialize(app router.Party, tph handler.TracePersistenceHandler) {
 	ruleEngineAPI := app.Party("/c/axon")
 	{
 		ruleEngineAPI.Get("/issue", tph.GetIssuesListWithDetailsHandler)
-		ruleEngineAPI.Get("/issue/{issueHash}", tph.GetIssueDetailsHandler)
-		ruleEngineAPI.Get("/issue/{issueHash}/incident", tph.GetIncidentListHandler)
-		ruleEngineAPI.Get("/issue/{issueHash}/incident/{incidentId}", tph.GetIncidentDetailsHandler)
-		ruleEngineAPI.Get("/issue/{issueHash}/incident/{incidentId}/span/{spanId}", tph.GetSpanRawDataHandler)
+		//Done
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}", tph.GetIssueDetailsHandler)
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident", tph.GetIncidentListHandler)
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident/{"+utils.IncidentId+"}", tph.GetIncidentDetailsHandler)
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident/{"+utils.IncidentId+"}/span/{"+utils.SpanId+"}", tph.GetSpanRawDataHandler)
 
 		ruleEngineAPI.Get("/scenario", tph.GetScenarioDetailsHandler)
 		ruleEngineAPI.Get("/scenario/{"+utils.ScenarioId+"}/incident", tph.GetIncidentListForScenarioId)

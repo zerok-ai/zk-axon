@@ -40,9 +40,11 @@ func main() {
 
 	configurator := iris.WithConfiguration(iris.Configuration{
 		DisablePathCorrection: true,
-		LogLevel:              "debug",
+		LogLevel:              cfg.LogsConfig.Level,
 	})
-	app.Listen(":"+cfg.Server.Port, configurator)
+	if err = app.Listen(":"+cfg.Server.Port, configurator); err != nil {
+		panic(err)
+	}
 }
 
 func newApp(tph handler.TracePersistenceHandler) *iris.Application {
@@ -52,8 +54,9 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 
 		if ctx.Method() == iris.MethodOptions {
-			ctx.Header("Access-Control-Methods",
-				"POST, PUT, PATCH, DELETE")
+			//ctx.Header("Access-Control-Methods",
+			//	"POST, PUT, PATCH, DELETE")
+			// Removed this, will test it soon
 
 			ctx.Header("Access-Control-Allow-Headers",
 				"Access-Control-Allow-Origin,Content-Type")
