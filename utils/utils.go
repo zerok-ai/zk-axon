@@ -69,6 +69,8 @@ func ParseTimeString(input string) (time.Duration, error) {
 }
 
 func ValidateOffsetLimitValue(offset, limit int) *zkErrors.ZkError {
+	//R: Can we also add max number for limit, if the dashboard or a bad actor sends a very high limit,
+	//then it might end up crashing the service.
 	if offset < 0 || limit < 1 {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, nil)
 		zkLogger.Error(LogTag, fmt.Sprintf("value of limit or offset is invalid, limit: %d, offset: %d", limit, offset), zkErr)

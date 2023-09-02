@@ -56,11 +56,6 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 	var response traceResponse.IssueListWithDetailsResponse
 	var startTime time.Time
 
-	//R: We should do this validation in the handler method along with other validations, and we can pass the duration to this method.
-	// My idea was to only validation the syntactic parts in handler and actual business logic in service layer.
-
-	// My idea was to only validation the syntactic parts in handler and actual business logic in service layer.
-	// Done
 	if t, zkErr := getStartTime(st); zkErr != nil {
 		return response, zkErr
 	} else {
@@ -101,8 +96,6 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 		}
 	}
 
-	//R: This looks like generic validation. Can we move this to a utils method?
-	//Done
 	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
 		return response, zkErr
 	}
@@ -141,11 +134,6 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 	var response traceResponse.ScenarioDetailsResponse
 	var startTime time.Time
 
-	//R: We should do this validation in the handler method along with other validations, and we can pass the duration to this method.
-	// My idea was to only validation the syntactic parts in handler and actual business logic in service layer.
-
-	//R: The same code is repeated above in GetIssueListWithDetailsService, we can move it to a common method.
-	// Done
 	if t, zkErr := getStartTime(st); zkErr != nil {
 		return response, zkErr
 	} else {
@@ -182,8 +170,6 @@ func (s tracePersistenceService) GetScenarioDetailsService(scenarioIds, services
 		}
 	}
 
-	//R: nil check is not required. Since len will be 0 even for nil array.
-	// Done
 	if len(scenarioIdList) == 0 {
 		zkLogger.Error(LogTag, "scenario id list is empty after parsing")
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdListEmpty, nil)
@@ -217,8 +203,7 @@ func (s tracePersistenceService) GetIssueDetailsService(issueHash string) (trace
 
 func (s tracePersistenceService) GetIncidentListService(issueHash string, offset, limit int) (traceResponse.IncidentIdListResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentIdListResponse
-	//R: Can we add a utils method for this?
-	//Done
+
 	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
 		return response, zkErr
 	}
@@ -236,8 +221,7 @@ func (s tracePersistenceService) GetIncidentListService(issueHash string, offset
 
 func (s tracePersistenceService) GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError) {
 	var response traceResponse.IncidentDetailsResponse
-	//R: Can we moved to a utils method.
-	//Done
+
 	if zkErr := utils.ValidateOffsetLimitValue(offset, limit); zkErr != nil {
 		return response, zkErr
 	}

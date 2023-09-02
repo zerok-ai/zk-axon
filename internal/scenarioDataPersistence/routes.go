@@ -11,7 +11,6 @@ func Initialize(app router.Party, tph handler.TracePersistenceHandler) {
 	ruleEngineAPI := app.Party("/c/axon")
 	{
 		ruleEngineAPI.Get("/issue", tph.GetIssuesListWithDetailsHandler)
-		//R: I can see corresponding variables for issueHash and incidentId in utils file. Let's use that.
 		//Done
 		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}", tph.GetIssueDetailsHandler)
 		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident", tph.GetIncidentListHandler)

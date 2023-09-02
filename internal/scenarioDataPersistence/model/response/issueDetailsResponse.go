@@ -132,8 +132,6 @@ func ConvertIssueDetailsDtoToIssueDetails(v dto.IssueDetailsDto) IssueDetails {
 	r.Incidents = v.Incidents
 	r.Sources = v.Sources
 	r.Destinations = v.Destinations
-	//R: As discussed, can we can this max limit of 5 in the query or in the repo?
-	// Done
 
 	return r
 }
@@ -152,9 +150,6 @@ func ConvertScenarioDetailsDtoToScenarioDetailsDetailsResponse(v dto.ScenarioDet
 	r.LastSeen = v.LastSeen
 	r.Sources = v.Sources
 	r.Destinations = v.Destinations
-
-	//R: As discussed, can we can this max limit of 5 in the query or in the repo?
-	// Done
 
 	return r
 }

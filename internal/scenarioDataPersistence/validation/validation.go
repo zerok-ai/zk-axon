@@ -114,11 +114,7 @@ func ValidateGetIncidentDetailsApi(traceId, offset, limit string) *zkerrors.ZkEr
 
 func ValidateLimit(limit string) *zkerrors.ZkError {
 	if !zkCommon.IsEmpty(limit) {
-		//R: I think we can also check if limit is greater than 0.
-		//C: we are only checking if limit is integer or not. Validating if limit is greater than 0 is done in service layer.
 
-		//R: Can we also add max number for limit, if the dashboard or a bad actor sends a very high limit,
-		//then it might end up crashing the service.
 		_, err := strconv.Atoi(limit)
 		if err != nil {
 			zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorBadRequestLimitIsNotInteger, nil)
@@ -130,8 +126,6 @@ func ValidateLimit(limit string) *zkerrors.ZkError {
 
 func ValidateOffset(offset string) *zkerrors.ZkError {
 	if !zkCommon.IsEmpty(offset) {
-		//R: I think we can also check if offset is greater than 0.
-		//C: we are only checking if offset is integer or not. Validating if offset is greater than 0 is done in service layer.
 		_, err := strconv.Atoi(offset)
 		if err != nil {
 			zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorBadRequestLimitIsNotInteger, nil)

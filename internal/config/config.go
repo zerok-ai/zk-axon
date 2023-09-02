@@ -45,9 +45,6 @@ type AppConfigs struct {
 	SuprSend   SuprSendConfig                  `yaml:"suprsend"`
 }
 
-//R: Unused code below. We can remove this.
-// Done
-
 // Args command-line parameters
 type Args struct {
 	ConfigPath string

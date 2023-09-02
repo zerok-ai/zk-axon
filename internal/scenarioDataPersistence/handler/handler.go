@@ -84,7 +84,6 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 		resp, zkErr = t.service.GetIssueListWithDetailsService(services, scenarioIds, st, l, o)
 	}
 
-	//R: We are sending rawResponse without check the http.Debug flag.
 	// DONE
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.IssueListWithDetailsResponse](200, resp, resp, zkErr)
@@ -112,8 +111,6 @@ func (t tracePersistenceHandler) GetScenarioDetailsHandler(ctx iris.Context) {
 		resp, zkErr = t.service.GetScenarioDetailsService(scenarioIds, services, st)
 	}
 
-	//R: We are sending rawResponse without check the http.Debug flag.
-	// DONE
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.ScenarioDetailsResponse](200, resp, resp, zkErr)
 	} else {
@@ -131,16 +128,12 @@ func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 	var zkErr *zkerrors.ZkError
 	var resp traceResponse.IssueDetailsResponse
 
-	//R: To keep things consistent can we move this to validation.go?
-	// Done
 	if zkErr := validation.ValidateIssueDetailsHandler(issueHash); zkErr != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIssueDetailsHandler: ", zkErr)
 	} else {
 		resp, zkErr = t.service.GetIssueDetailsService(issueHash)
 	}
 
-	//R: We are sending rawResponse without check the http.Debug flag.
-	// DONE
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.IssueDetailsResponse](200, resp, resp, zkErr)
 	} else {
@@ -162,15 +155,12 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 
 	if zkErr := validation.ValidateIssueHashOffsetAndLimit(issueHash, offset, limit); zkErr != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIncidentListHandler api", zkErr)
-		//R: Can we add a utils method for this?
 	} else {
 		l, _ := strconv.Atoi(limit)
 		o, _ := strconv.Atoi(offset)
 		resp, zkErr = t.service.GetIncidentListService(issueHash, o, l)
 	}
 
-	//R: We are sending rawResponse without check the http.Debug flag.
-	// DONE
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.IncidentIdListResponse](200, resp, resp, zkErr)
 	} else {
@@ -182,7 +172,7 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 }
 
 func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
-	//R: The url path has issueHash, but we are not reading it here. What is the need of adding that?
+
 	// We can remove it from the url path. Trace_id is enough to identify everything. I'll add a to do as this would also require frontend changes.
 	// TODO: The url path has issueHash, but we are not reading it here, remove from here and frontend.
 	traceId := ctx.Params().Get(utils.IncidentId)
@@ -202,7 +192,6 @@ func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
 		resp, zkErr = t.service.GetIncidentDetailsService(traceId, spanId, o, l)
 	}
 
-	//R: We are sending rawResponse without check the http.Debug flag.
 	// DONE
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.IncidentDetailsResponse](200, resp, resp, zkErr)
@@ -215,7 +204,6 @@ func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
 }
 
 func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
-	//R: We are not reading issueHash here.
 	// We can remove it from the url path. Trace_id is enough to identify everything. I'll add a to do as this would also require frontend changes.
 	// TODO: The url path has issueHash, but we are not reading it here, remove from here and frontend.
 	traceId := ctx.Params().Get(utils.IncidentId)
@@ -231,8 +219,6 @@ func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
 		resp, zkErr = t.service.GetSpanRawDataService(traceId, spanId)
 	}
 
-	//R: We are sending rawResponse without check the http.Debug flag.
-	// DONE
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.SpanRawDataResponse](200, resp, resp, zkErr)
 	} else {
