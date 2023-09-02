@@ -76,7 +76,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 		}
 	}
 
-	var scenarioIdList []int
+	var scenarioIdList []int32
 	if zkUtils.IsEmpty(scenarioIds) {
 		zkLogger.Info(LogTag, "scenarioIds list is empty")
 	} else {
@@ -92,7 +92,7 @@ func (s tracePersistenceService) GetIssueListWithDetailsService(services, scenar
 				zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestScenarioIdNotInteger, nil)
 				return response, &zkErr
 			}
-			scenarioIdList = append(scenarioIdList, i)
+			scenarioIdList = append(scenarioIdList, int32(i))
 		}
 	}
 

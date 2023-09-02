@@ -30,7 +30,7 @@ const (
 var LogTag = "zk_trace_persistence_repo"
 
 type TracePersistenceRepo interface {
-	IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error)
+	IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int32, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error)
 	GetScenarioDetailsRepo(scenarioId, serviceList pq.StringArray, st time.Time) ([]dto.ScenarioDetailsDto, error)
 	GetIssueDetails(issueHash string) ([]dto.IssueDetailsDto, error)
 	GetTraces(issueHash string, offset, limit int) ([]dto.IncidentTableDto, error)
@@ -84,32 +84,25 @@ func NewTracePersistenceRepo(dbRepo sqlDB.DatabaseRepo) TracePersistenceRepo {
 	return &tracePersistenceRepo{dbRepo: dbRepo}
 }
 
-func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error) {
+func (z tracePersistenceRepo) IssueListDetailsRepo(serviceList pq.StringArray, scenarioList []int32, limit, offset int, st time.Time) ([]dto.IssueDetailsDto, error) {
 	var query string
 	var params []any
 
-	//R: Why don't we create and pass int32 int array as param for the method.
-	// postgres does not support int array for query. So we are using pq.Int32Array
-	var scenarioListInt32 pq.Int32Array
-	for _, i := range scenarioList {
-		scenarioListInt32 = append(scenarioListInt32, int32(i))
-	}
-
 	if len(serviceList) == 0 {
-		if scenarioListInt32 == nil || len(scenarioListInt32) == 0 {
+		if scenarioList == nil || len(scenarioList) == 0 {
 			query = GetIssueDetailsListWithoutServiceNameAndScenarioIdFilter
 			params = []any{true, st, limit, offset}
 		} else {
 			query = GetIssueDetailsListWithoutServiceNameAndWithScenarioIdFilter
-			params = []any{true, st, scenarioListInt32, limit, offset}
+			params = []any{true, st, scenarioList, limit, offset}
 		}
 	} else {
-		if len(scenarioListInt32) == 0 {
+		if len(scenarioList) == 0 {
 			query = GetIssueDetailsWithServiceNameAndWithoutScenarioIdListFilter
 			params = []any{true, st, serviceList, serviceList, limit, offset}
 		} else {
 			query = GetIssueDetailsListWithServiceNameAndScenarioIdFilter
-			params = []any{true, st, serviceList, serviceList, scenarioListInt32, limit, offset}
+			params = []any{true, st, serviceList, serviceList, scenarioList, limit, offset}
 		}
 	}
 
