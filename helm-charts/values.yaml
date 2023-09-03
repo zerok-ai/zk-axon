@@ -30,5 +30,5 @@ postgres:
 
 image:
   repo: "zk-axon"
-  tag: latest
+  tag: "latest"
   imagePullPolicy: Always
