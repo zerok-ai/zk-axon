@@ -262,7 +262,11 @@ func (z tracePersistenceRepo) GetSpans(traceId, spanId string, offset, limit int
 	var responseArr []dto.SpanTableDto
 	for rows.Next() {
 		var rawData dto.SpanTableDto
-		err := rows.Scan(&rawData.TraceID, &rawData.ParentSpanID, &rawData.SpanID, &rawData.IsRoot, &rawData.Kind, &rawData.StartTime, &rawData.Latency, &rawData.Source, &rawData.Destination, &rawData.WorkloadIDList, &rawData.Protocol, &rawData.IssueHashList, &rawData.RequestPayloadSize, &rawData.ResponsePayloadSize, &rawData.Method, &rawData.Route, &rawData.Scheme, &rawData.Path, &rawData.Query, &rawData.Status, &rawData.Metadata, &rawData.Username)
+		err := rows.Scan(&rawData.TraceID, &rawData.ParentSpanID, &rawData.SpanID, &rawData.IsRoot, &rawData.Kind,
+			&rawData.StartTime, &rawData.Latency, &rawData.Source, &rawData.Destination, &rawData.WorkloadIDList,
+			&rawData.Protocol, &rawData.IssueHashList, &rawData.RequestPayloadSize, &rawData.ResponsePayloadSize,
+			&rawData.Method, &rawData.Route, &rawData.Scheme, &rawData.Path, &rawData.Query, &rawData.Status,
+			&rawData.Metadata, &rawData.Username, &rawData.SourceIP, &rawData.DestinationIP, &rawData.ServiceName)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
 			return nil, err

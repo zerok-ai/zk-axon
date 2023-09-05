@@ -40,6 +40,9 @@ type SpanTableDto struct {
 	Status              int            `json:"status"`
 	Metadata            *string        `json:"metadata"`
 	Username            string         `json:"username"`
+	SourceIP            string         `json:"source_ip"`
+	DestinationIP       string         `json:"destination_ip"`
+	ServiceName         string         `json:"service_name"`
 }
 
 type IssueDetailsDto struct {
