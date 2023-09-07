@@ -17,6 +17,10 @@ const (
 	ScenarioId = "scenarioId"
 	//Scenario   = "scenarioId"
 
+	Namespace    = "namespace"
+	PodId        = "podId"
+	RateInterval = "rateInterval"
+
 	// Query Params
 	IssueHashQueryParam      = "issue_hash"
 	SpanIdQueryParam         = "span_id"

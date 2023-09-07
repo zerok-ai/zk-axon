@@ -2,10 +2,19 @@ package main
 
 import (
 	"axon/internal/config"
+	"axon/internal/prometheus"
+
+	promHandler "axon/internal/prometheus/handler"
+	promRepository "axon/internal/prometheus/repository"
+	promService "axon/internal/prometheus/service"
 	"axon/internal/scenarioDataPersistence"
-	"axon/internal/scenarioDataPersistence/handler"
-	"axon/internal/scenarioDataPersistence/repository"
-	"axon/internal/scenarioDataPersistence/service"
+	"fmt"
+	"github.com/prometheus/client_golang/api"
+	"os"
+
+	scenarioHandler "axon/internal/scenarioDataPersistence/handler"
+	scenarioRepository "axon/internal/scenarioDataPersistence/repository"
+	scenarioService "axon/internal/scenarioDataPersistence/service"
 	"github.com/kataras/iris/v12"
 	zkConfig "github.com/zerok-ai/zk-utils-go/config"
 	zkHttpConfig "github.com/zerok-ai/zk-utils-go/http/config"
@@ -32,11 +41,26 @@ func main() {
 
 	zkLogger.Debug(LogTag, "Parsed Configuration", cfg)
 
-	tpr := repository.NewTracePersistenceRepo(zkPostgresRepo)
-	tps := service.NewScenarioPersistenceService(tpr)
-	tph := handler.NewTracePersistenceHandler(tps, cfg)
+	tpr := scenarioRepository.NewTracePersistenceRepo(zkPostgresRepo)
+	tps := scenarioService.NewScenarioPersistenceService(tpr)
+	tph := scenarioHandler.NewTracePersistenceHandler(tps, cfg)
 
-	app := newApp(tph)
+	client, err := api.NewClient(api.Config{
+		Address: "http://localhost:9090",
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating Prometheus client: %v\n", err)
+		os.Exit(1)
+	}
+
+	promRepo := promRepository.NewPromQLRepo(client)
+	promSvc := promService.NewPrometheusService(promRepo)
+	promH := promHandler.NewPrometheusHandler(promSvc, cfg)
+
+	app := newApp()
+	v1 := app.Party("/v1")
+	scenarioDataPersistence.Initialize(v1, tph)
+	prometheus.Initialize(v1, promH)
 
 	configurator := iris.WithConfiguration(iris.Configuration{
 		DisablePathCorrection: true,
@@ -47,7 +71,7 @@ func main() {
 	}
 }
 
-func newApp(tph handler.TracePersistenceHandler) *iris.Application {
+func newApp() *iris.Application {
 	app := iris.Default()
 
 	crs := func(ctx iris.Context) {
@@ -77,9 +101,6 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 	app.Get("/healthz", func(ctx iris.Context) {
 		ctx.WriteString("pong")
 	}).Describe("healthcheck")
-
-	v1 := app.Party("/v1")
-	scenarioDataPersistence.Initialize(v1, tph)
 
 	return app
 }
