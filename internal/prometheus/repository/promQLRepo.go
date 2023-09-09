@@ -2,32 +2,26 @@ package repository
 
 import (
 	"axon/internal/prometheus/model/request"
-	"context"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	logger "github.com/zerok-ai/zk-utils-go/logs"
-	"os"
-	"reflect"
-	"strings"
-	"text/template"
-	"time"
 )
 
 var LogTag = "zk_promQL_repo"
 
 type PromQLRepo interface {
-	GetPodCPUUsage(podInfoReq request.PodInfoRequest) (model.Matrix, error)
-	GetPodMemoryUsage(podInfoReq request.PodInfoRequest) (model.Matrix, error)
-	PodInfoQuery(podInfoReq request.PodInfoRequest) (model.Vector, error)
-	PodCreatedQuery(podInfoReq request.PodInfoRequest) (model.Vector, error)
-	PodContainerInfoQuery(podInfoReq request.PodInfoRequest) (model.Vector, error)
+	GetPodCPUUsage(podInfoReq request.PromRequestMeta) (model.Matrix, error)
+	GetPodMemoryUsage(podInfoReq request.PromRequestMeta) (model.Matrix, error)
+	PodsInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
+	PodCreatedQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
+	PodContainerInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
 }
 
 const (
-	CPUUsageQueryTemplate    = `sum(rate(container_cpu_usage_seconds_total{namespace="{{.Namespace}}", pod=~"{{.Pod}}"}[{{.RateInterval}}])) by (container)`
-	MemoryUsageQueryTemplate = `sum(container_memory_working_set_bytes{namespace="{{.Namespace}}", pod=~"{{.Pod}}"}) by (container)`
-	PodInfoQuery             = `kube_pod_info{namespace="{{.Namespace}}",pod=~"{{.Pod}}"} @ {{.Timestamp}}`
+	CPUUsageQueryTemplate    = `sum(rate(container_cpu_usage_seconds_total{namespace="{{.Namespace}}", pod=~"{{.Pod}}", image!="", container!=""}[{{.RateInterval}}])) by (container)`
+	MemoryUsageQueryTemplate = `sum(container_memory_working_set_bytes{namespace="{{.Namespace}}", pod=~"{{.Pod}}", image!="", container!=""}) by (container)`
+	PodsInfoQuery            = `kube_pod_info{pod=~"^({{.PodsListStr}})$"} @ {{.Timestamp}}`
 	PodCreatedQuery          = `kube_pod_created{namespace="{{.Namespace}}",pod=~"{{.Pod}}"} @ {{.Timestamp}}`
 	PodContainerInfoQuery    = `kube_pod_container_info{namespace="{{.Namespace}}",pod=~"{{.Pod}}"} @ {{.Timestamp}}`
 )
@@ -44,8 +38,8 @@ func NewPromQLRepo(client api.Client) PromQLRepo {
 	}
 }
 
-func (r promQLRepo) PodInfoQuery(podInfoReq request.PodInfoRequest) (model.Vector, error) {
-	query, err := r.GetPromQueryString(PodInfoQuery, podInfoReq)
+func (r promQLRepo) PodsInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error) {
+	query, err := GetPromQueryString(PodsInfoQuery, podInfoReq)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +51,8 @@ func (r promQLRepo) PodInfoQuery(podInfoReq request.PodInfoRequest) (model.Vecto
 	return podInfo, nil
 }
 
-func (r promQLRepo) PodCreatedQuery(podInfoReq request.PodInfoRequest) (model.Vector, error) {
-	query, err := r.GetPromQueryString(PodCreatedQuery, podInfoReq)
+func (r promQLRepo) PodCreatedQuery(podInfoReq request.PromRequestMeta) (model.Vector, error) {
+	query, err := GetPromQueryString(PodCreatedQuery, podInfoReq)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +64,8 @@ func (r promQLRepo) PodCreatedQuery(podInfoReq request.PodInfoRequest) (model.Ve
 	return podCreated, nil
 }
 
-func (r promQLRepo) PodContainerInfoQuery(podInfoReq request.PodInfoRequest) (model.Vector, error) {
-	query, err := r.GetPromQueryString(PodContainerInfoQuery, podInfoReq)
+func (r promQLRepo) PodContainerInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error) {
+	query, err := GetPromQueryString(PodContainerInfoQuery, podInfoReq)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +77,8 @@ func (r promQLRepo) PodContainerInfoQuery(podInfoReq request.PodInfoRequest) (mo
 	return podContainerInfo, nil
 }
 
-func (r promQLRepo) GetPodCPUUsage(podInfoReq request.PodInfoRequest) (model.Matrix, error) {
-	query, err := r.GetPromQueryString(CPUUsageQueryTemplate, podInfoReq)
+func (r promQLRepo) GetPodCPUUsage(podInfoReq request.PromRequestMeta) (model.Matrix, error) {
+	query, err := GetPromQueryString(CPUUsageQueryTemplate, podInfoReq)
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +91,8 @@ func (r promQLRepo) GetPodCPUUsage(podInfoReq request.PodInfoRequest) (model.Mat
 	return cpuMetric, nil
 }
 
-func (r promQLRepo) GetPodMemoryUsage(podInfoReq request.PodInfoRequest) (model.Matrix, error) {
-	query, err := r.GetPromQueryString(MemoryUsageQueryTemplate, podInfoReq)
+func (r promQLRepo) GetPodMemoryUsage(podInfoReq request.PromRequestMeta) (model.Matrix, error) {
+	query, err := GetPromQueryString(MemoryUsageQueryTemplate, podInfoReq)
 	if err != nil {
 		return nil, err
 	}
@@ -108,80 +102,4 @@ func (r promQLRepo) GetPodMemoryUsage(podInfoReq request.PodInfoRequest) (model.
 		return nil, err
 	}
 	return memoryMetric, nil
-}
-
-func (r promQLRepo) GetPromQueryString(templateString string, podInfoReq request.PodInfoRequest) (string, error) {
-	// Create a PromQL query
-	queryTemplate, err := template.New("query").Parse(templateString)
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-	query := new(strings.Builder)
-	err = queryTemplate.Execute(query, podInfoReq)
-
-	// Query Prometheus
-	logger.Debug(LogTag, "cpu query: ", query.String())
-	logger.Debug(LogTag, "over: "+podInfoReq.StartTime.String()+" to "+podInfoReq.EndTime.String())
-	return query.String(), nil
-}
-
-func (r promQLRepo) GetPromMatrixData(query string, startTime time.Time, endTime time.Time) (model.Matrix, error) {
-	// Execute the query
-	ctx := context.Background()
-	result, warnings, err := r.queryAPI.QueryRange(ctx, query, v1.Range{
-		Start: startTime,
-		End:   endTime,
-		Step:  1 * time.Minute, // Adjust the step as needed
-	})
-	if err != nil {
-		logger.Error(LogTag, os.Stderr, "Error executing query: %v\n", err)
-		return nil, err
-	}
-
-	// Check for query warnings
-	if len(warnings) > 0 {
-		logger.Warn(LogTag, "Query warnings:\n")
-		for _, warning := range warnings {
-			logger.Warn(LogTag, "%s\n", warning)
-		}
-	}
-
-	logger.Debug(LogTag, "Result type: ", reflect.TypeOf(result).Name())
-
-	// Process query result
-	if matrix, ok := result.(model.Matrix); ok {
-		return matrix, nil
-	} else {
-		logger.Debug(LogTag, "Query did not return a matrix\n")
-	}
-
-	return model.Matrix{}, nil
-}
-
-func (r promQLRepo) GetPromData(query string, endTime time.Time) (model.Vector, error) {
-	// Execute the query
-	ctx := context.Background()
-	result, warnings, err := r.queryAPI.Query(ctx, query, endTime)
-	if err != nil {
-		logger.Error(LogTag, os.Stderr, "Error executing query: %v\n", err)
-		return nil, err
-	}
-
-	// Check for query warnings
-	if len(warnings) > 0 {
-		logger.Warn(LogTag, "Query warnings:\n")
-		for _, warning := range warnings {
-			logger.Warn(LogTag, "%s\n", warning)
-		}
-	}
-
-	logger.Debug(LogTag, "Result type: ", reflect.TypeOf(result).Name())
-	// Process query result
-	if vector, ok := result.(model.Vector); ok {
-		return vector, nil
-	} else {
-		logger.Debug(LogTag, "Query did not return a Vector\n")
-	}
-
-	return model.Vector{}, nil
 }

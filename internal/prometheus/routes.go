@@ -8,8 +8,10 @@ import (
 
 func Initialize(app router.Party, tph handler.PrometheusHandler) {
 
-	promAPI := app.Party("/c/prom")
+	promAPI := app.Party("/c/axon/prom")
 	{
-		promAPI.Get("/pod/{"+utils.PodId+"}/ns/{"+utils.Namespace+"}", tph.GetPodDetailsHandler)
+		promAPI.Get("/pods-info/trace/{"+utils.TraceId+"}", tph.GetPodsInfoHandler)
+		promAPI.Get("/container-info/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", tph.GetContainerInfoHandler)
+		promAPI.Get("/container-metrics/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", tph.GetContainerMetricsHandler)
 	}
 }

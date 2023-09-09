@@ -7,7 +7,7 @@ logs:
   level: DEBUG
 
 http:
-  debug: true
+  debug: false
 
 postgres:
   host: localhost

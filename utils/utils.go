@@ -18,6 +18,7 @@ const (
 	//Scenario   = "scenarioId"
 
 	Namespace    = "namespace"
+	TraceId      = "traceId"
 	PodId        = "podId"
 	RateInterval = "rateInterval"
 

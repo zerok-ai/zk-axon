@@ -7,12 +7,15 @@ import (
 	"github.com/prometheus/common/model"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
+	"strings"
 )
 
 var LogTag = "zk_prometheus_service"
 
 type PrometheusService interface {
-	GetPodDetailsService(podInfoReq request.PodInfoRequest) (promResponse.PodDetailResponse, *zkErrors.ZkError)
+	GetPodsInfoService(podInfoReq request.PromRequestMeta) (promResponse.PodsInfoResponse, *zkErrors.ZkError)
+	GetContainerInfoService(podInfoReq request.PromRequestMeta) (promResponse.ContainerInfoResponse, *zkErrors.ZkError)
+	GetContainerMetricService(podInfoReq request.PromRequestMeta) (promResponse.ContainerMetricsResponse, *zkErrors.ZkError)
 }
 
 func NewPrometheusService(repo repository.PromQLRepo) PrometheusService {
@@ -23,74 +26,68 @@ type prometheusService struct {
 	repo repository.PromQLRepo
 }
 
-func (s prometheusService) GetPodDetailsService(podInfoReq request.PodInfoRequest) (promResponse.PodDetailResponse, *zkErrors.ZkError) {
-	var response promResponse.PodDetailResponse
-	var cpuUsage promResponse.Usage
-	var memUsage promResponse.Usage
+func (s prometheusService) GetPodsInfoService(podInfoReq request.PromRequestMeta) (promResponse.PodsInfoResponse, *zkErrors.ZkError) {
+	var response promResponse.PodsInfoResponse
+
+	podsInfo, err := s.repo.PodsInfoQuery(podInfoReq)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while collecting podInfo: ", err)
+		return response, nil
+	}
+
+	podsInfoItems := extraceMetricAttributes(podsInfo)
+	response.PodsInfo = podsInfoItems
+	return response, nil
+}
+
+func (s prometheusService) GetContainerInfoService(podInfoReq request.PromRequestMeta) (promResponse.ContainerInfoResponse, *zkErrors.ZkError) {
+	var response promResponse.ContainerInfoResponse
+	podContainerInfo, err := s.repo.PodContainerInfoQuery(podInfoReq)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while collecting podContainerInfo: ", err)
+		return response, nil
+	}
+	podContainerInfoItems := extraceMetricAttributes(podContainerInfo)
+	response.ContainerInfo = podContainerInfoItems
+	return response, nil
+}
+
+func (s prometheusService) GetContainerMetricService(podInfoReq request.PromRequestMeta) (promResponse.ContainerMetricsResponse, *zkErrors.ZkError) {
+	var response promResponse.ContainerMetricsResponse
 
 	cpuUsageData, err := s.repo.GetPodCPUUsage(podInfoReq)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting cpuUsageData: ", err)
 		return response, nil
 	}
-	cpuUsage = promResponse.ConvertMetricToPodUsage("CPU Usage", cpuUsageData)
+	cpuUsage := promResponse.ConvertMetricToPodUsage(cpuUsageData)
 
 	memUsageData, err := s.repo.GetPodMemoryUsage(podInfoReq)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting cpuUsageData: ", err)
 		return response, nil
 	}
-	memUsage = promResponse.ConvertMetricToPodUsage("Memory Usage", memUsageData)
+	memUsage := promResponse.ConvertMetricToPodUsage(memUsageData)
 
-	podInfo, err := s.repo.PodInfoQuery(podInfoReq)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while collecting podInfo: ", err)
-		return response, nil
-	}
-
-	podCreated, err := s.repo.PodCreatedQuery(podInfoReq)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while collecting podCreated: ", err)
-		return response, nil
-	}
-
-	podContainerInfo, err := s.repo.PodContainerInfoQuery(podInfoReq)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while collecting podContainerInfo: ", err)
-		return response, nil
-	}
-
-	podContainerInfoItems := extraceMetricAttributes(podContainerInfo)
-	podCreatedItems := extraceMetricAttributes(podCreated)
-	podInfoItems := extraceMetricAttributes(podInfo)
-
-	var metadataItems = make(map[string]interface{})
-	mergeMaps(metadataItems, podContainerInfoItems)
-	mergeMaps(metadataItems, podCreatedItems)
-	mergeMaps(metadataItems, podInfoItems)
-
-	//podMetadata, err := s.repo.GetPodMetadata(namespace, podId)
-	podMetadata := metadataItems
-
-	response = promResponse.PodDetailResponse{
-		PodName:      "podId",
-		Metadata:     podMetadata,
-		ZkInferences: "ZkInferences",
-		CPUUsage:     cpuUsage,
-		MemUsage:     memUsage,
-	}
+	response.CPUUsage = cpuUsage
+	response.MemUsage = memUsage
 
 	return response, nil
 }
 
-func extraceMetricAttributes(dataVector model.Vector) map[string]interface{} {
-	var attributes = make(map[string]interface{})
+func extraceMetricAttributes(dataVector model.Vector) promResponse.VectorList {
+	var vectorList promResponse.VectorList = make([]promResponse.AttributesMap, 0)
 	for _, sample := range dataVector {
+		var attributes = make(map[string]string)
 		for key, value := range sample.Metric {
+			if strings.HasPrefix(string(key), "__") {
+				continue
+			}
 			attributes[string(key)] = string(value)
 		}
+		vectorList = append(vectorList, attributes)
 	}
-	return attributes
+	return vectorList
 }
 
 func mergeMaps(m1 map[string]interface{}, m2 map[string]interface{}) {

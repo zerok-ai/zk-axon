@@ -55,7 +55,7 @@ func main() {
 
 	promRepo := promRepository.NewPromQLRepo(client)
 	promSvc := promService.NewPrometheusService(promRepo)
-	promH := promHandler.NewPrometheusHandler(promSvc, cfg)
+	promH := promHandler.NewPrometheusHandler(promSvc, tps, cfg)
 
 	app := newApp()
 	v1 := app.Party("/v1")
