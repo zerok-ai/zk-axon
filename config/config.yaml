@@ -18,3 +18,8 @@ postgres:
   max_connections: 5
   max_idle_connections: 5
   connection_max_lifetime_in_minutes: 10
+
+prometheus:
+  host: localhost
+  port: 9090
+  protocol: http

@@ -45,8 +45,9 @@ func main() {
 	tps := scenarioService.NewScenarioPersistenceService(tpr)
 	tph := scenarioHandler.NewTracePersistenceHandler(tps, cfg)
 
+	promAddr := cfg.Prometheus.Protocol + "://" + cfg.Prometheus.Host + ":" + cfg.Prometheus.Port
 	client, err := api.NewClient(api.Config{
-		Address: "http://localhost:9090",
+		Address: promAddr,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating Prometheus client: %v\n", err)

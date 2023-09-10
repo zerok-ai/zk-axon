@@ -31,9 +31,16 @@ type RouterConfigs struct {
 	ZkDashboard string `yaml:"zkDashboard" env-description:"Zk dashboard url"`
 }
 
+type PrometheusConfig struct {
+	Host     string `yaml:"host" env:"PROM_HOST" env-description:"Prometheus host" env-default:"localhost"`
+	Port     string `yaml:"port" env:"PROM_PORT" env-description:"Prometheus port" env-default:"9090"`
+	Protocol string `yaml:"protocol" env:"PROM_PROTOCOL" env-description:"Prometheus protocol" env-default:"http"`
+}
+
 // AppConfigs is an application configuration structure
 // R: Many of  these configs are not used anymore. We can clean up them.
 type AppConfigs struct {
+	Prometheus PrometheusConfig                `yaml:"prometheus"`
 	Postgres   zkPostgresConfig.PostgresConfig `yaml:"postgres"`
 	Server     ServerConfig                    `yaml:"server"`
 	AuthConfig AuthConfig                      `yaml:"auth"`
