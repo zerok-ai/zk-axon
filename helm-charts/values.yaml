@@ -30,7 +30,7 @@ postgres:
 
 prometheus:
   host: prometheus-graf-server.monitoring.svc.cluster.local
-  port: 9090
+  port: 80
   protocol: http
 
 image:
