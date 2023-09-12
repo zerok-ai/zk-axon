@@ -19,6 +19,10 @@ data:
       max_connections: 5
       max_idle_connections: 5
       connection_max_lifetime_in_minutes: 10
+    prometheus:
+      host: {{ .Values.prometheus.host }}
+      port: {{ .Values.prometheus.port }}
+      protocol: {{ .Values.prometheus.protocol }}
 
 kind: ConfigMap
 metadata:
