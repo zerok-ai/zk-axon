@@ -6,6 +6,7 @@ import (
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	logger "github.com/zerok-ai/zk-utils-go/logs"
+	"time"
 )
 
 var LogTag = "zk_promQL_repo"
@@ -16,6 +17,7 @@ type PromQLRepo interface {
 	PodsInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
 	PodCreatedQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
 	PodContainerInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
+	GenericQuery(genericRequest request.GenericRequest) (interface{}, string, error)
 }
 
 const (
@@ -38,13 +40,22 @@ func NewPromQLRepo(client api.Client) PromQLRepo {
 	}
 }
 
+func (r promQLRepo) GenericQuery(genericRequest request.GenericRequest) (interface{}, string, error) {
+	logger.Debug(LogTag, "Query: ", genericRequest.Query)
+	result, resultType, err := r.GetPromData(genericRequest.Query, time.Unix(genericRequest.StartTime, 0), time.Unix(genericRequest.EndTime, 0))
+	if err != nil {
+		return nil, "", err
+	}
+	return result, resultType, nil
+}
+
 func (r promQLRepo) PodsInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error) {
 	query, err := GetPromQueryString(PodsInfoQuery, podInfoReq)
 	if err != nil {
 		return nil, err
 	}
 	logger.Debug(LogTag, "Query: ", query)
-	podInfo, err := r.GetPromData(query, podInfoReq.EndTime)
+	podInfo, err := r.GetPromVectorData(query, podInfoReq.EndTime)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +68,7 @@ func (r promQLRepo) PodCreatedQuery(podInfoReq request.PromRequestMeta) (model.V
 		return nil, err
 	}
 	logger.Debug(LogTag, "Query: ", query)
-	podCreated, err := r.GetPromData(query, podInfoReq.EndTime)
+	podCreated, err := r.GetPromVectorData(query, podInfoReq.EndTime)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +81,7 @@ func (r promQLRepo) PodContainerInfoQuery(podInfoReq request.PromRequestMeta) (m
 		return nil, err
 	}
 	logger.Debug(LogTag, "Query: ", query)
-	podContainerInfo, err := r.GetPromData(query, podInfoReq.EndTime)
+	podContainerInfo, err := r.GetPromVectorData(query, podInfoReq.EndTime)
 	if err != nil {
 		return nil, err
 	}

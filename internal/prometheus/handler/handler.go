@@ -2,6 +2,7 @@ package handler
 
 import (
 	"axon/internal/config"
+	"axon/internal/prometheus/model/request"
 	promResponse "axon/internal/prometheus/model/response"
 	prometheusService "axon/internal/prometheus/service"
 	tracePersistenceService "axon/internal/scenarioDataPersistence/service"
@@ -17,28 +18,65 @@ type PrometheusHandler interface {
 	GetPodsInfoHandler(ctx iris.Context)
 	GetContainerInfoHandler(ctx iris.Context)
 	GetContainerMetricsHandler(ctx iris.Context)
+	GetGenericQueryHandler(ctx iris.Context)
 }
 
 var LogTag = "prometheus_handler"
 
 type prometheusHandler struct {
-	tracePercistanceSvc tracePersistenceService.TracePersistenceService
+	tracePersistenceSvc tracePersistenceService.TracePersistenceService
 	prometheusSvc       prometheusService.PrometheusService
 	cfg                 config.AppConfigs
 }
 
 func NewPrometheusHandler(persistenceService prometheusService.PrometheusService,
-	tracePercistanceSvc tracePersistenceService.TracePersistenceService,
+	tracePersistenceSvc tracePersistenceService.TracePersistenceService,
 	cfg config.AppConfigs) PrometheusHandler {
 	return &prometheusHandler{
-		tracePercistanceSvc: tracePercistanceSvc,
+		tracePersistenceSvc: tracePersistenceSvc,
 		prometheusSvc:       persistenceService,
 		cfg:                 cfg,
 	}
 }
 
+func (t prometheusHandler) GetGenericQueryHandler(ctx iris.Context) {
+	var req request.GenericHTTPRequest
+	readError := ctx.ReadJSON(&req)
+	if readError != nil {
+		zkLogger.Error(LogTag, "Error while reading request body: ", readError)
+		ctx.StatusCode(500)
+		return
+	}
+	promQuery := req.Query
+	promDatasourceId := req.PromDatasourceId
+	startTime := req.Time
+	if startTime == 0 {
+		startTime = time.Now().Unix()
+	}
+	durationStr := ctx.URLParamDefault(utils.DurationQueryParam, "0m")
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while parsing duration: ", err)
+		ctx.StatusCode(500)
+		return
+	}
+
+	endTime := startTime + int64(duration.Seconds())
+	queryReq := request.GenericRequest{
+		PromDatasourceId: promDatasourceId,
+		Query:            string(promQuery),
+		StartTime:        int64(startTime),
+		EndTime:          int64(endTime),
+		Duration:         int64(duration),
+	}
+	resp, zkErr := t.prometheusSvc.GetGenericQueryService(queryReq)
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.GenericQueryResponse]
+	sendResponse[promResponse.GenericQueryResponse](ctx, resp, zkHttpResponse, zkErr, t.cfg.Http.Debug)
+}
+
 func (t prometheusHandler) GetPodsInfoHandler(ctx iris.Context) {
-	spansList, err := t.tracePercistanceSvc.GetIncidentDetailsService(ctx.Params().Get(utils.TraceId), "", 0, 50)
+	spansList, err := t.tracePersistenceSvc.GetIncidentDetailsService(ctx.Params().Get(utils.TraceId), "", 0, 50)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting spanList: ", err)
 		ctx.StatusCode(500)

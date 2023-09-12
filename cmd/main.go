@@ -34,9 +34,52 @@ func main() {
 	zkLogger.Info(LogTag, "********* Initializing Application *********")
 	zkHttpConfig.Init(cfg.Http.Debug)
 	zkLogger.Init(cfg.LogsConfig)
+
+	app := newApp()
+	v1 := app.Party("/v1")
+
+	tracePersistenceHandler, tracePersistenceService, _ := getTracePersistenceHandler(cfg)
+	scenarioDataPersistence.Initialize(v1, tracePersistenceHandler)
+
+	promQueryHandler, _, _ := getPrometheusHandler(cfg, tracePersistenceService)
+	prometheus.Initialize(v1, promQueryHandler)
+
+	configurator := iris.WithConfiguration(iris.Configuration{
+		DisablePathCorrection: true,
+		LogLevel:              cfg.LogsConfig.Level,
+	})
+	if err := app.Listen(":"+cfg.Server.Port, configurator); err != nil {
+		panic(err)
+	}
+}
+
+func getPrometheusHandler(cfg config.AppConfigs, tps scenarioService.TracePersistenceService) (promHandler.PrometheusHandler, promService.PrometheusService, promRepository.PromQLRepo) {
+	dataSources := make(map[string]promRepository.PromQLRepo)
+	promAddr := cfg.Prometheus.Protocol + "://" + cfg.Prometheus.Host + ":" + cfg.Prometheus.Port
+	client, err := api.NewClient(api.Config{
+		Address: promAddr,
+	})
+	if err != nil {
+		errorStr, err := fmt.Fprintf(os.Stderr, "Error creating Prometheus client: %v\n", err)
+		if err != nil {
+			zkLogger.Error(LogTag, err)
+			return nil, nil, nil
+		}
+		zkLogger.Error(LogTag, errorStr)
+		os.Exit(1)
+	}
+
+	promRepo := promRepository.NewPromQLRepo(client)
+	promSvc := promService.NewPrometheusService(promRepo, dataSources)
+	promH := promHandler.NewPrometheusHandler(promSvc, tps, cfg)
+
+	return promH, promSvc, promRepo
+}
+
+func getTracePersistenceHandler(cfg config.AppConfigs) (scenarioHandler.TracePersistenceHandler, scenarioService.TracePersistenceService, scenarioRepository.TracePersistenceRepo) {
 	zkPostgresRepo, err := zkPostgres.NewZkPostgresRepo(cfg.Postgres)
 	if err != nil {
-		return
+		return nil, nil, nil
 	}
 
 	zkLogger.Debug(LogTag, "Parsed Configuration", cfg)
@@ -44,32 +87,7 @@ func main() {
 	tpr := scenarioRepository.NewTracePersistenceRepo(zkPostgresRepo)
 	tps := scenarioService.NewScenarioPersistenceService(tpr)
 	tph := scenarioHandler.NewTracePersistenceHandler(tps, cfg)
-
-	promAddr := cfg.Prometheus.Protocol + "://" + cfg.Prometheus.Host + ":" + cfg.Prometheus.Port
-	client, err := api.NewClient(api.Config{
-		Address: promAddr,
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating Prometheus client: %v\n", err)
-		os.Exit(1)
-	}
-
-	promRepo := promRepository.NewPromQLRepo(client)
-	promSvc := promService.NewPrometheusService(promRepo)
-	promH := promHandler.NewPrometheusHandler(promSvc, tps, cfg)
-
-	app := newApp()
-	v1 := app.Party("/v1")
-	scenarioDataPersistence.Initialize(v1, tph)
-	prometheus.Initialize(v1, promH)
-
-	configurator := iris.WithConfiguration(iris.Configuration{
-		DisablePathCorrection: true,
-		LogLevel:              cfg.LogsConfig.Level,
-	})
-	if err = app.Listen(":"+cfg.Server.Port, configurator); err != nil {
-		panic(err)
-	}
+	return tph, tps, tpr
 }
 
 func newApp() *iris.Application {

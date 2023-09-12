@@ -15,12 +15,15 @@ const (
 	IncidentId = "incidentId"
 	SpanId     = "spanId"
 	ScenarioId = "scenarioId"
+
 	//Scenario   = "scenarioId"
 
 	Namespace    = "namespace"
 	TraceId      = "traceId"
 	PodId        = "podId"
 	RateInterval = "rateInterval"
+	PromQuery    = "promQuery"
+	DatasourceId = "datasourceId"
 
 	// Query Params
 	IssueHashQueryParam      = "issue_hash"
@@ -30,6 +33,7 @@ const (
 	LimitQueryParam          = "limit"
 	OffsetQueryParam         = "offset"
 	StartTimeQueryParam      = "st"
+	DurationQueryParam       = "duration"
 
 	LogTag = "utils"
 )

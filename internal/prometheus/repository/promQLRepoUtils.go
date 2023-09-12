@@ -28,6 +28,72 @@ func GetPromQueryString(templateString string, podInfoReq request.PromRequestMet
 	return query.String(), nil
 }
 
+func (r promQLRepo) GetGenericQuery(query string, startTime time.Time, endTime time.Time) (model.Matrix, error) {
+	// Execute the query
+	ctx := context.Background()
+	result, warnings, err := r.queryAPI.QueryRange(ctx, query, v1.Range{
+		Start: startTime,
+		End:   endTime,
+		Step:  1 * time.Minute, // Adjust the step as needed
+	})
+	if err != nil {
+		logger.Error(LogTag, os.Stderr, "Error executing query: %v\n", err)
+		return nil, err
+	}
+
+	// Check for query warnings
+	if len(warnings) > 0 {
+		logger.Warn(LogTag, "Query warnings:\n")
+		for _, warning := range warnings {
+			logger.Warn(LogTag, "%s\n", warning)
+		}
+	}
+
+	logger.Debug(LogTag, "Result type: ", reflect.TypeOf(result).Name())
+
+	reflect.TypeOf(result).Name()
+	// Process query result
+	if matrix, ok := result.(model.Matrix); ok {
+		return matrix, nil
+	} else {
+		logger.Debug(LogTag, "Query did not return a matrix\n")
+	}
+
+	return nil, nil
+}
+
+func (r promQLRepo) GetPromData(query string, startTime time.Time, endTime time.Time) (interface{}, string, error) {
+	// Execute the query
+	ctx := context.Background()
+	var result model.Value
+	var warnings v1.Warnings
+	var err error
+	if startTime == endTime {
+		result, warnings, err = r.queryAPI.Query(ctx, query, endTime)
+	} else {
+		result, warnings, err = r.queryAPI.QueryRange(ctx, query, v1.Range{
+			Start: startTime,
+			End:   endTime,
+			Step:  1 * time.Minute, // Adjust the step as needed
+		})
+	}
+	if err != nil {
+		logger.Error(LogTag, os.Stderr, "Error executing query: %v\n", err)
+		return nil, "", err
+	}
+
+	// Check for query warnings
+	if len(warnings) > 0 {
+		logger.Warn(LogTag, "Query warnings:\n")
+		for _, warning := range warnings {
+			logger.Warn(LogTag, "%s\n", warning)
+		}
+	}
+
+	resultType := reflect.TypeOf(result).Name()
+	logger.Debug(LogTag, "Result type: ", resultType)
+	return result, resultType, nil
+}
 func (r promQLRepo) GetPromMatrixData(query string, startTime time.Time, endTime time.Time) (model.Matrix, error) {
 	// Execute the query
 	ctx := context.Background()
@@ -61,7 +127,7 @@ func (r promQLRepo) GetPromMatrixData(query string, startTime time.Time, endTime
 	return model.Matrix{}, nil
 }
 
-func (r promQLRepo) GetPromData(query string, endTime time.Time) (model.Vector, error) {
+func (r promQLRepo) GetPromVectorData(query string, endTime time.Time) (model.Vector, error) {
 	// Execute the query
 	ctx := context.Background()
 	result, warnings, err := r.queryAPI.Query(ctx, query, endTime)

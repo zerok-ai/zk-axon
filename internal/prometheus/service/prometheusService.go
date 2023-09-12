@@ -16,38 +16,52 @@ type PrometheusService interface {
 	GetPodsInfoService(podInfoReq request.PromRequestMeta) (promResponse.PodsInfoResponse, *zkErrors.ZkError)
 	GetContainerInfoService(podInfoReq request.PromRequestMeta) (promResponse.ContainerInfoResponse, *zkErrors.ZkError)
 	GetContainerMetricService(podInfoReq request.PromRequestMeta) (promResponse.ContainerMetricsResponse, *zkErrors.ZkError)
+	GetGenericQueryService(genericQueryReq request.GenericRequest) (promResponse.GenericQueryResponse, *zkErrors.ZkError)
 }
 
-func NewPrometheusService(repo repository.PromQLRepo) PrometheusService {
-	return prometheusService{repo: repo}
+func NewPrometheusService(metricServerRepo repository.PromQLRepo, dataSources map[string]repository.PromQLRepo) PrometheusService {
+	return prometheusService{metricServerRepo: metricServerRepo, dataSources: dataSources}
 }
 
 type prometheusService struct {
-	repo repository.PromQLRepo
+	metricServerRepo repository.PromQLRepo
+	dataSources      map[string]repository.PromQLRepo
+}
+
+func (s prometheusService) GetGenericQueryService(genericQueryReq request.GenericRequest) (promResponse.GenericQueryResponse, *zkErrors.ZkError) {
+	var response promResponse.GenericQueryResponse
+	queryResult, resultType, err := s.metricServerRepo.GenericQuery(genericQueryReq)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while collecting queryResult: ", err)
+		return response, nil
+	}
+	response.Result = queryResult
+	response.Type = resultType
+	return response, nil
 }
 
 func (s prometheusService) GetPodsInfoService(podInfoReq request.PromRequestMeta) (promResponse.PodsInfoResponse, *zkErrors.ZkError) {
 	var response promResponse.PodsInfoResponse
 
-	podsInfo, err := s.repo.PodsInfoQuery(podInfoReq)
+	podsInfo, err := s.metricServerRepo.PodsInfoQuery(podInfoReq)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting podInfo: ", err)
 		return response, nil
 	}
 
-	podsInfoItems := extraceMetricAttributes(podsInfo)
+	podsInfoItems := extractMetricAttributes(podsInfo)
 	response.PodsInfo = podsInfoItems
 	return response, nil
 }
 
 func (s prometheusService) GetContainerInfoService(podInfoReq request.PromRequestMeta) (promResponse.ContainerInfoResponse, *zkErrors.ZkError) {
 	var response promResponse.ContainerInfoResponse
-	podContainerInfo, err := s.repo.PodContainerInfoQuery(podInfoReq)
+	podContainerInfo, err := s.metricServerRepo.PodContainerInfoQuery(podInfoReq)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting podContainerInfo: ", err)
 		return response, nil
 	}
-	podContainerInfoItems := extraceMetricAttributes(podContainerInfo)
+	podContainerInfoItems := extractMetricAttributes(podContainerInfo)
 	response.ContainerInfo = podContainerInfoItems
 	return response, nil
 }
@@ -55,14 +69,14 @@ func (s prometheusService) GetContainerInfoService(podInfoReq request.PromReques
 func (s prometheusService) GetContainerMetricService(podInfoReq request.PromRequestMeta) (promResponse.ContainerMetricsResponse, *zkErrors.ZkError) {
 	var response promResponse.ContainerMetricsResponse
 
-	cpuUsageData, err := s.repo.GetPodCPUUsage(podInfoReq)
+	cpuUsageData, err := s.metricServerRepo.GetPodCPUUsage(podInfoReq)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting cpuUsageData: ", err)
 		return response, nil
 	}
 	cpuUsage := promResponse.ConvertMetricToPodUsage(cpuUsageData)
 
-	memUsageData, err := s.repo.GetPodMemoryUsage(podInfoReq)
+	memUsageData, err := s.metricServerRepo.GetPodMemoryUsage(podInfoReq)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting cpuUsageData: ", err)
 		return response, nil
@@ -75,7 +89,7 @@ func (s prometheusService) GetContainerMetricService(podInfoReq request.PromRequ
 	return response, nil
 }
 
-func extraceMetricAttributes(dataVector model.Vector) promResponse.VectorList {
+func extractMetricAttributes(dataVector model.Vector) promResponse.VectorList {
 	var vectorList promResponse.VectorList = make([]promResponse.AttributesMap, 0)
 	for _, sample := range dataVector {
 		var attributes = make(map[string]string)
