@@ -30,7 +30,8 @@ type prometheusService struct {
 
 func (s prometheusService) GetGenericQueryService(genericQueryReq request.GenericRequest) (promResponse.GenericQueryResponse, *zkErrors.ZkError) {
 	var response promResponse.GenericQueryResponse
-	queryResult, resultType, err := s.metricServerRepo.GenericQuery(genericQueryReq)
+	targetDatasource := s.dataSources[genericQueryReq.PromDatasourceId]
+	queryResult, resultType, err := targetDatasource.GenericQuery(genericQueryReq)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while collecting queryResult: ", err)
 		return response, nil

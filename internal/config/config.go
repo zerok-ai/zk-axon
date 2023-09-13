@@ -3,6 +3,7 @@ package config
 import (
 	zkHttpConfig "github.com/zerok-ai/zk-utils-go/http/config"
 	zkLogsConfig "github.com/zerok-ai/zk-utils-go/logs/config"
+	"github.com/zerok-ai/zk-utils-go/storage/redis/config"
 	zkPostgresConfig "github.com/zerok-ai/zk-utils-go/storage/sqlDB/postgres/config"
 )
 
@@ -50,6 +51,7 @@ type AppConfigs struct {
 	Router     RouterConfigs                   `yaml:"router"`
 	Greeting   string                          `env:"GREETING" env-description:"Greeting phrase" env-default:"Hello!"`
 	SuprSend   SuprSendConfig                  `yaml:"suprsend"`
+	Redis      *config.RedisConfig
 }
 
 // Args command-line parameters

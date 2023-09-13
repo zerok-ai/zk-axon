@@ -19,7 +19,13 @@ postgres:
   max_idle_connections: 5
   connection_max_lifetime_in_minutes: 10
 
-prometheus:
-  host: localhost
-  port: 9090
-  protocol: http
+redis:
+  host: 127.0.0.1
+  port: 6379
+  dbs:
+    traces: 1
+    otel: 3
+    scenarios: 6
+    integrations: 9
+  readTimeout: 20
+  password: "D2sFrB00RM"

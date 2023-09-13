@@ -28,11 +28,6 @@ postgres:
   max_idle_connections: 5
   connection_max_lifetime_in_minutes: 10
 
-prometheus:
-  host: prometheus-graf-server.monitoring.svc.cluster.local
-  port: 80
-  protocol: http
-
 image:
   repo: "zk-axon"
   tag: latest

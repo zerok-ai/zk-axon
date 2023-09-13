@@ -3,23 +3,22 @@ package main
 import (
 	"axon/internal/config"
 	"axon/internal/prometheus"
-
 	promHandler "axon/internal/prometheus/handler"
+	"axon/internal/prometheus/model/dto"
 	promRepository "axon/internal/prometheus/repository"
 	promService "axon/internal/prometheus/service"
 	"axon/internal/scenarioDataPersistence"
-	"fmt"
-	"github.com/prometheus/client_golang/api"
-	"os"
-
 	scenarioHandler "axon/internal/scenarioDataPersistence/handler"
 	scenarioRepository "axon/internal/scenarioDataPersistence/repository"
 	scenarioService "axon/internal/scenarioDataPersistence/service"
 	"github.com/kataras/iris/v12"
+	"github.com/prometheus/client_golang/api"
 	zkConfig "github.com/zerok-ai/zk-utils-go/config"
 	zkHttpConfig "github.com/zerok-ai/zk-utils-go/http/config"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
+	store "github.com/zerok-ai/zk-utils-go/storage/redis"
 	zkPostgres "github.com/zerok-ai/zk-utils-go/storage/sqlDB/postgres"
+	"time"
 )
 
 var LogTag = "main"
@@ -55,25 +54,34 @@ func main() {
 
 func getPrometheusHandler(cfg config.AppConfigs, tps scenarioService.TracePersistenceService) (promHandler.PrometheusHandler, promService.PrometheusService, promRepository.PromQLRepo) {
 	dataSources := make(map[string]promRepository.PromQLRepo)
-	promAddr := cfg.Prometheus.Protocol + "://" + cfg.Prometheus.Host + ":" + cfg.Prometheus.Port
-	client, err := api.NewClient(api.Config{
-		Address: promAddr,
-	})
+	var metricServerDatasource promRepository.PromQLRepo
+	RefreshInterval := 20 * time.Minute
+	datasourceStore, err := store.GetVersionedStore[dto.Datasource](cfg.Redis, "integrations", RefreshInterval)
 	if err != nil {
-		errorStr, err := fmt.Fprintf(os.Stderr, "Error creating Prometheus client: %v\n", err)
-		if err != nil {
-			zkLogger.Error(LogTag, err)
-			return nil, nil, nil
-		}
-		zkLogger.Error(LogTag, errorStr)
-		os.Exit(1)
+		zkLogger.Error(LogTag, "Error creating datasource store: %v\n", err)
+		return nil, nil, nil
 	}
 
-	promRepo := promRepository.NewPromQLRepo(client)
-	promSvc := promService.NewPrometheusService(promRepo, dataSources)
+	dataSourcesMap := datasourceStore.GetAllValues()
+	for _, datasource := range dataSourcesMap {
+		promClient, err := api.NewClient(api.Config{
+			Address: datasource.Url,
+		})
+		if err != nil {
+			zkLogger.Error(LogTag, "Error creating Prometheus client: %v\n", err)
+			continue
+		}
+		dataSources[datasource.Id] = promRepository.NewPromQLRepo(promClient)
+
+		if datasource.MetricServer {
+			metricServerDatasource = dataSources[datasource.Id]
+		}
+	}
+
+	promSvc := promService.NewPrometheusService(metricServerDatasource, dataSources)
 	promH := promHandler.NewPrometheusHandler(promSvc, tps, cfg)
 
-	return promH, promSvc, promRepo
+	return promH, promSvc, metricServerDatasource
 }
 
 func getTracePersistenceHandler(cfg config.AppConfigs) (scenarioHandler.TracePersistenceHandler, scenarioService.TracePersistenceService, scenarioRepository.TracePersistenceRepo) {
