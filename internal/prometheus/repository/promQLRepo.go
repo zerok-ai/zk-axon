@@ -17,7 +17,7 @@ type PromQLRepo interface {
 	PodsInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
 	PodCreatedQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
 	PodContainerInfoQuery(podInfoReq request.PromRequestMeta) (model.Vector, error)
-	GenericQuery(genericRequest request.GenericRequest) (interface{}, string, error)
+	GenericQuery(genericRequest request.GenericPromRequest) (interface{}, string, error)
 }
 
 const (
@@ -40,9 +40,13 @@ func NewPromQLRepo(client api.Client) PromQLRepo {
 	}
 }
 
-func (r promQLRepo) GenericQuery(genericRequest request.GenericRequest) (interface{}, string, error) {
+func (r promQLRepo) GenericQuery(genericRequest request.GenericPromRequest) (interface{}, string, error) {
 	logger.Debug(LogTag, "Query: ", genericRequest.Query)
-	result, resultType, err := r.GetPromData(genericRequest.Query, time.Unix(genericRequest.StartTime, 0), time.Unix(genericRequest.EndTime, 0))
+	result, resultType, err := r.GetPromData(genericRequest.Query,
+		time.Unix(genericRequest.StartTime, 0),
+		time.Unix(genericRequest.EndTime, 0),
+		time.Duration(genericRequest.Duration),
+		time.Duration(genericRequest.Step))
 	if err != nil {
 		return nil, "", err
 	}
@@ -95,7 +99,7 @@ func (r promQLRepo) GetPodCPUUsage(podInfoReq request.PromRequestMeta) (model.Ma
 	}
 	logger.Debug(LogTag, "Query: ", query)
 	logger.Debug(LogTag, podInfoReq.Namespace, podInfoReq.Pod)
-	cpuMetric, err := r.GetPromMatrixData(query, podInfoReq.StartTime, podInfoReq.EndTime)
+	cpuMetric, err := r.GetPromMatrixData(query, podInfoReq.StartTime, podInfoReq.EndTime, podInfoReq.RateInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +112,7 @@ func (r promQLRepo) GetPodMemoryUsage(podInfoReq request.PromRequestMeta) (model
 		return nil, err
 	}
 	logger.Debug(LogTag, "Query: ", query)
-	memoryMetric, err := r.GetPromMatrixData(query, podInfoReq.StartTime, podInfoReq.EndTime)
+	memoryMetric, err := r.GetPromMatrixData(query, podInfoReq.StartTime, podInfoReq.EndTime, podInfoReq.RateInterval)
 	if err != nil {
 		return nil, err
 	}

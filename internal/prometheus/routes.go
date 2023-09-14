@@ -13,6 +13,6 @@ func Initialize(app router.Party, tph handler.PrometheusHandler) {
 		promClusterAPIs.Get("/prom/container-info/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", tph.GetContainerInfoHandler)
 		promClusterAPIs.Get("/prom/container-metrics/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", tph.GetContainerMetricsHandler)
 
-		promClusterAPIs.Post("/prom/{"+utils.DatasourceId+"}/query", tph.GetGenericQueryHandler)
+		promClusterAPIs.Post("/prom/{"+utils.IntegrationId+"}/query", tph.GetGenericQueryHandler)
 	}
 }

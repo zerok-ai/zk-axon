@@ -18,12 +18,14 @@ const (
 
 	//Scenario   = "scenarioId"
 
-	Namespace    = "namespace"
-	TraceId      = "traceId"
-	PodId        = "podId"
-	RateInterval = "rateInterval"
-	PromQuery    = "promQuery"
-	DatasourceId = "datasourceId"
+	Namespace     = "namespace"
+	TraceId       = "traceId"
+	PodId         = "podId"
+	PromQuery     = "promQuery"
+	IntegrationId = "integrationId"
+
+	RateIntervalQueryParam = "rate-interval"
+	TimeQueryParam         = "time"
 
 	// Query Params
 	IssueHashQueryParam      = "issue_hash"
@@ -87,4 +89,16 @@ func ValidateOffsetLimitValue(offset, limit int) *zkErrors.ZkError {
 	}
 
 	return nil
+}
+
+func MergeMaps(m1 map[string]interface{}, m2 map[string]interface{}) {
+	for k, v := range m2 {
+		m1[k] = v
+	}
+}
+
+func BuildZkError(logTag string, errStr ...string) *zkErrors.ZkError {
+	err := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorBadRequest, strings.Join(errStr, " "))
+	zkLogger.Error(logTag, errStr)
+	return &err
 }

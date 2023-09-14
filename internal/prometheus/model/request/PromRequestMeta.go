@@ -7,7 +7,7 @@ import (
 type PromRequestMeta struct {
 	Namespace        string
 	Pod              string
-	RateInterval     string
+	RateInterval     time.Duration
 	StartTime        time.Time
 	EndTime          time.Time
 	Timestamp        int64

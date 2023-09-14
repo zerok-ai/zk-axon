@@ -5,26 +5,44 @@ import (
 	"axon/utils"
 	"github.com/kataras/iris/v12"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
-	logger "github.com/zerok-ai/zk-utils-go/logs"
+	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strings"
 	"time"
 )
 
-func generatePromRequest(ctx iris.Context) request.PromRequestMeta {
+func generatePromRequestMetadata(ctx iris.Context) request.PromRequestMeta {
 	// Calculate the start and end times for the time range
-	// TODO: Replace with your specified time
-	endTime := time.Now()         // Replace with your specified time
-	timeRange := 10 * time.Minute // Time range around the specified time
-	startTime := endTime.Add(-timeRange)
+	endTimeQP := ctx.URLParamDefault(utils.TimeQueryParam, time.Now().Format(time.RFC3339))
+	durationQP := ctx.URLParamDefault(utils.DurationQueryParam, "10m")
+	intervalQP := ctx.URLParamDefault(utils.RateIntervalQueryParam, "1m")
 
-	// TODO: Replace with request params
-	logger.Debug(LogTag, "store len:", ctx.Params().Store.Len())
+	endTime, err := time.Parse(time.RFC3339, endTimeQP)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while parsing time: ", err)
+		ctx.StatusCode(500)
+		return request.PromRequestMeta{}
+	}
+
+	duration, err := time.ParseDuration(durationQP)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while parsing duration: ", err)
+		ctx.StatusCode(500)
+		return request.PromRequestMeta{}
+	}
+
+	interval, err := time.ParseDuration(intervalQP)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while parsing interval: ", err)
+		ctx.StatusCode(500)
+		return request.PromRequestMeta{}
+	}
+	startTime := endTime.Add(duration)
 
 	promReqMeta := request.PromRequestMeta{
 		Namespace:    ctx.Params().Get(utils.Namespace),
 		Pod:          ctx.Params().Get(utils.PodId),
-		RateInterval: ctx.URLParamDefault(utils.RateInterval, "10m"),
+		RateInterval: interval,
 		StartTime:    startTime,
 		EndTime:      endTime,
 		Timestamp:    endTime.Unix(),
@@ -32,6 +50,57 @@ func generatePromRequest(ctx iris.Context) request.PromRequestMeta {
 	return promReqMeta
 }
 
+func generateGenericPromRequest(ctx iris.Context, req request.GenericHTTPRequest) *request.GenericPromRequest {
+	promQuery := req.Query
+	endTime := req.Time
+	if endTime == 0 {
+		endTime = time.Now().Unix()
+	}
+
+	durationStr := req.Duration
+	if durationStr == "" {
+		durationStr = "0m"
+	}
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while parsing duration: ", err)
+		ctx.StatusCode(500)
+		return nil
+	}
+
+	stepStr := req.Step
+	if stepStr == "" {
+		stepStr = "1m"
+	}
+	step, err := time.ParseDuration(stepStr)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while parsing step: ", err)
+		ctx.StatusCode(500)
+		return nil
+	}
+	if step < 0 {
+		zkLogger.Error(LogTag, "Step should be positive")
+		ctx.StatusCode(500)
+		return nil
+	}
+
+	startTime := endTime + int64(duration.Seconds())
+	promIntegrationId := ctx.Params().Get(utils.IntegrationId)
+	if promIntegrationId == "" {
+		zkLogger.Error(LogTag, "Integration id is missing")
+		ctx.StatusCode(500)
+		return nil
+	}
+	queryReq := request.GenericPromRequest{
+		PromIntegrationId: promIntegrationId,
+		Query:             string(promQuery),
+		StartTime:         int64(startTime),
+		EndTime:           int64(endTime),
+		Duration:          int64(duration),
+		Step:              int64(step),
+	}
+	return &queryReq
+}
 func sendResponse[T any](ctx iris.Context, resp T, zkHttpResponse zkHttp.ZkHttpResponse[T], zkErr *zkErrors.ZkError, debug bool) {
 	if debug {
 		zkHttpResponse = zkHttp.ToZkResponse[T](200, resp, resp, zkErr)
