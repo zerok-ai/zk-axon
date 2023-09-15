@@ -30,6 +30,11 @@ func generatePromRequestMetadata(ctx iris.Context) request.PromRequestMeta {
 		ctx.StatusCode(500)
 		return request.PromRequestMeta{}
 	}
+	if duration > 0 {
+		zkLogger.Error(LogTag, "Duration should be negative")
+		ctx.StatusCode(500)
+		return request.PromRequestMeta{}
+	}
 
 	interval, err := time.ParseDuration(intervalQP)
 	if err != nil {
