@@ -16,6 +16,7 @@ func Initialize(app router.Party, tph handler.TracePersistenceHandler) {
 		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident", tph.GetIncidentListHandler)
 		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident/{"+utils.IncidentId+"}", tph.GetIncidentDetailsHandler)
 		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident/{"+utils.IncidentId+"}/span/{"+utils.SpanId+"}", tph.GetSpanRawDataHandler)
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident/{"+utils.IncidentId+"}/span/{"+utils.SpanId+"}/exception", tph.GetExceptionDataHandler)
 
 		ruleEngineAPI.Get("/scenario", tph.GetScenarioDetailsHandler)
 		ruleEngineAPI.Get("/scenario/{"+utils.ScenarioId+"}/incident", tph.GetIncidentListForScenarioId)

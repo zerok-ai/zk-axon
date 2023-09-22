@@ -20,9 +20,10 @@ const (
 	GetScenarioDetailsWithServiceNameFilter                      = "SELECT scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen FROM (SELECT trace_id, SOURCE, issue_hash_list, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL AND start_time > $1 AND (SOURCE = ANY($2) OR destination = ANY($3))) AS s INNER JOIN incident USING(trace_id) INNER JOIN issue USING(issue_hash) WHERE issue.issue_hash = ANY(issue_hash_list) AND scenario_id=ANY($4) GROUP BY scenario_id, scenario_version ORDER BY last_seen DESC"
 	GetIssueDetailsByIssueHash                                   = "SELECT issue.issue_hash, issue.issue_title, scenario_id, scenario_version, ARRAY_AGG(DISTINCT(source)) sources, ARRAY_AGG(DISTINCT(destination)) destinations, COUNT(*) AS total_count, min(start_time) AS first_seen, max(start_time) AS last_seen, ARRAY (SELECT temp.trace_id FROM (SELECT DISTINCT i1.trace_id, max(s1.start_time) FROM incident i1 INNER JOIN span s1 using(trace_id) WHERE i1.trace_id=ANY(ARRAY_AGG(incident.trace_id)) GROUP BY i1.trace_id ORDER BY max(s1.start_time) DESC)  AS TEMP) incidents FROM (SELECT * FROM issue WHERE issue_hash = $1) AS issue INNER JOIN incident USING(issue_hash) INNER JOIN (SELECT trace_id, issue_hash_list, source, destination, start_time FROM span WHERE issue_hash_list IS NOT NULL) AS s USING(trace_id) WHERE issue.issue_hash = ANY(issue_hash_list) GROUP BY issue.issue_hash, issue.issue_title, scenario_id, scenario_version"
 	GetTraceQuery                                                = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, incident.trace_id, issue_hash, incident_collection_time, SOURCE, path, protocol, start_time, latency FROM incident INNER JOIN span USING(trace_id) WHERE issue_hash=$2 AND is_root=$3 ORDER BY incident_collection_time DESC LIMIT $4 OFFSET $5"
-	GetSpanQueryUsingTraceId                                     = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username, source_ip, destination_ip, service_name FROM span WHERE trace_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3"
-	GetSpanQueryUsingTraceIdAndSpanId                            = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username, source_ip, destination_ip, service_name FROM span WHERE trace_id=$1 AND span_id=$2"
+	GetSpanQueryUsingTraceId                                     = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username, source_ip, destination_ip, service_name, error_type, error_table_id FROM span WHERE trace_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3"
+	GetSpanQueryUsingTraceIdAndSpanId                            = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username, source_ip, destination_ip, service_name, error_type, error_table_id FROM span WHERE trace_id=$1 AND span_id=$2"
 	GetSpanRawDataQuery                                          = "SELECT span.trace_id, span.span_id, req_headers, resp_headers, is_truncated, req_body, resp_body, protocol FROM span_raw_data INNER JOIN span ON span.span_id = span_raw_data.span_id AND span.trace_id = span_raw_data.trace_id WHERE span.trace_id=$1 AND span.span_id=$2"
+	GetExceptionDataQuery                                        = "SELECT exception_data.id, exception_body FROM span INNER JOIN exception_data ON span.error_table_id = exception_data.id WHERE span.trace_id=$1 AND span.span_id=$2"
 	GetTraceQueryByScenarioId                                    = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3 AND issue.issue_hash=$4) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $5 OFFSET $6"
 	GetTraceQueryByScenarioIdWithoutIssueHashFilter              = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $4 OFFSET $5"
 )
@@ -37,6 +38,7 @@ type TracePersistenceRepo interface {
 	GetTracesForScenarioId(scenarioId, issueHash string, limit, offset int) ([]dto.IncidentTableDto, error)
 	GetSpans(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error)
 	GetSpanRawData(traceId, spanId string) ([]dto.SpanRawDataDetailsDto, error)
+	GetExceptionData(traceId string, spanId string) ([]dto.ExceptionTableDto, error)
 }
 
 type tracePersistenceRepo struct {
@@ -266,7 +268,9 @@ func (z tracePersistenceRepo) GetSpans(traceId, spanId string, offset, limit int
 			&rawData.StartTime, &rawData.Latency, &rawData.Source, &rawData.Destination, &rawData.WorkloadIDList,
 			&rawData.Protocol, &rawData.IssueHashList, &rawData.RequestPayloadSize, &rawData.ResponsePayloadSize,
 			&rawData.Method, &rawData.Route, &rawData.Scheme, &rawData.Path, &rawData.Query, &rawData.Status,
-			&rawData.Metadata, &rawData.Username, &rawData.SourceIP, &rawData.DestinationIP, &rawData.ServiceName)
+			&rawData.Metadata, &rawData.Username, &rawData.SourceIP, &rawData.DestinationIP, &rawData.ServiceName,
+			&rawData.ErrorType, &rawData.ErrorTableId)
+
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
 			return nil, err
@@ -294,6 +298,30 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string) ([]dto.Span
 		err := rows.Scan(&rawData.TraceID, &rawData.SpanID, &rawData.ReqHeaders, &rawData.RespHeaders, &rawData.IsTruncated, &rawData.ReqBody, &rawData.RespBody, &rawData.Protocol)
 		if err != nil {
 			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
+			continue
+		}
+
+		data = append(data, rawData)
+	}
+
+	return data, nil
+}
+
+func (z tracePersistenceRepo) GetExceptionData(traceId string, spanId string) ([]dto.ExceptionTableDto, error) {
+	rows, err, closeRow := z.dbRepo.GetAll(GetExceptionDataQuery, []any{traceId, spanId})
+	defer closeRow()
+
+	if err != nil || rows == nil {
+		zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
+		return nil, err
+	}
+
+	var data []dto.ExceptionTableDto
+	for rows.Next() {
+		var rawData dto.ExceptionTableDto
+		err := rows.Scan(&rawData.Id, &rawData.ExceptionBody)
+		if err != nil {
+			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s, exception not fetched", traceId, spanId), err)
 			continue
 		}
 

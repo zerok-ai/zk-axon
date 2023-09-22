@@ -24,7 +24,7 @@ type SpanRawDataDetails struct {
 }
 
 func ConvertSpanRawDataToSpanRawDataResponse(t []dto.SpanRawDataDetailsDto) (SpanRawDataResponse, *error) {
-	respMap := make(map[string]SpanRawDataDetails, 0)
+	respMap := make(map[string]SpanRawDataDetails)
 	resp := SpanRawDataResponse{}
 
 	for _, v := range t {

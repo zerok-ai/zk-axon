@@ -21,6 +21,7 @@ type TracePersistenceHandler interface {
 	GetIncidentDetailsHandler(ctx iris.Context)
 	GetSpanRawDataHandler(ctx iris.Context)
 	GetIncidentListForScenarioId(ctx iris.Context)
+	GetExceptionDataHandler(ctx iris.Context)
 }
 
 var LogTag = "trace_persistence_handler"
@@ -223,6 +224,30 @@ func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.SpanRawDataResponse](200, resp, resp, zkErr)
 	} else {
 		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.SpanRawDataResponse](200, resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+}
+
+func (t tracePersistenceHandler) GetExceptionDataHandler(ctx iris.Context) {
+	traceId := ctx.Params().Get(utils.IncidentId)
+	spanId := ctx.Params().Get(utils.SpanId)
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.ExceptionDataResponse]
+	var zkErr *zkerrors.ZkError
+	var resp traceResponse.ExceptionDataResponse
+
+	if zkErr := validation.ValidateGetSpanRawDataApi(traceId, spanId); zkErr != nil {
+		zkLogger.Error(LogTag, "Error while validating GetSpanRawDataHandler api", zkErr)
+	} else {
+		resp, zkErr = t.service.GetExceptionDataService(traceId, spanId)
+	}
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.ExceptionDataResponse](200, resp, resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.ExceptionDataResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)

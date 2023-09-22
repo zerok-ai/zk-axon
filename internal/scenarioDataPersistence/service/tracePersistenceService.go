@@ -24,6 +24,7 @@ type TracePersistenceService interface {
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
 	GetSpanRawDataService(traceId, spanId string) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
 	GetIncidentListServiceForScenarioId(scenarioId, issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError)
+	GetExceptionDataService(traceId string, spanId string) (traceResponse.ExceptionDataResponse, *zkErrors.ZkError)
 }
 
 func NewScenarioPersistenceService(repo repository.TracePersistenceRepo) TracePersistenceService {
@@ -241,17 +242,36 @@ func (s tracePersistenceService) GetSpanRawDataService(traceId, spanId string) (
 	var response traceResponse.SpanRawDataResponse
 
 	data, err := s.repo.GetSpanRawData(traceId, spanId)
-	if err == nil {
-		response, respErr := traceResponse.ConvertSpanRawDataToSpanRawDataResponse(data)
-		if respErr != nil {
-			zkLogger.Error(LogTag, "failed to convert span raw data to response", err)
-			zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
-			return response, &zkErr
-		}
-
-		return response, nil
+	if err != nil {
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
+		return response, &zkErr
 	}
 
-	zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
-	return response, &zkErr
+	response, respErr := traceResponse.ConvertSpanRawDataToSpanRawDataResponse(data)
+	if respErr != nil {
+		zkLogger.Error(LogTag, "failed to convert span raw data to response", err)
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorInternalServer, nil)
+		return response, &zkErr
+	}
+
+	return response, nil
+}
+
+func (s tracePersistenceService) GetExceptionDataService(traceId string, spanId string) (traceResponse.ExceptionDataResponse, *zkErrors.ZkError) {
+	var response traceResponse.ExceptionDataResponse
+
+	data, err := s.repo.GetExceptionData(traceId, spanId)
+	if err != nil {
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
+		return response, &zkErr
+	}
+
+	response, respErr := traceResponse.ConvertExceptionDataToExceptionDataResponse(data)
+	if respErr != nil {
+		zkLogger.Error(LogTag, "failed to convert exception data to response", err)
+		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorInternalServer, nil)
+		return response, &zkErr
+	}
+
+	return response, nil
 }

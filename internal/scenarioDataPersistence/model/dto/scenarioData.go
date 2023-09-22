@@ -43,6 +43,8 @@ type SpanTableDto struct {
 	SourceIP            string         `json:"source_ip"`
 	DestinationIP       string         `json:"destination_ip"`
 	ServiceName         string         `json:"service_name"`
+	ErrorType           string         `json:"error_type"`
+	ErrorTableId        string         `json:"error_table_id"`
 }
 
 type IssueDetailsDto struct {
@@ -80,4 +82,9 @@ type SpanRawDataDetailsDto struct {
 	IsTruncated bool   `json:"is_truncated"`
 	ReqBody     []byte `json:"req_body"`
 	RespBody    []byte `json:"resp_body"`
+}
+
+type ExceptionTableDto struct {
+	Id            string `json:"id"`
+	ExceptionBody []byte `json:"exception_body"`
 }
