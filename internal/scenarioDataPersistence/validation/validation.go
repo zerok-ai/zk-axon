@@ -81,6 +81,28 @@ func ValidateScenarioIdOffsetAndLimit(scenarioId, offset, limit string) *zkerror
 	return nil
 }
 
+func ValidateGetErrors(errorIdList []string) *zkerrors.ZkError {
+	if len(errorIdList) == 0 {
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestErrorIdListIdEmpty, nil)
+		return &zkErr
+	}
+
+	isEmpty := false
+	for _, errorId := range errorIdList {
+		if zkCommon.IsEmpty(errorId) {
+			isEmpty = true
+			break
+		}
+	}
+
+	if isEmpty {
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestErrorIdListIdEmpty, nil)
+		return &zkErr
+	}
+
+	return nil
+}
+
 func ValidateGetSpanRawDataApi(traceId, spanId string) *zkerrors.ZkError {
 	if zkCommon.IsEmpty(traceId) {
 		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestTraceIdIdEmpty, nil)

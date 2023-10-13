@@ -6,40 +6,40 @@ import (
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 )
 
-type ExceptionDataResponse struct {
-	Exceptions ExceptionDataDetailsMap `json:"exception_data_details"`
+type ErrorDataResponse struct {
+	Errors []ErrorDataDetails `json:"errors"`
 }
 
-type ExceptionDataDetailsMap map[string]ExceptionDataDetails
+type ErrorDataDetailsMap map[string]ErrorDataDetails
 
-type ExceptionDataDetails struct {
-	Id            string `json:"id"`
-	ExceptionBody string `json:"exception_body"`
+type ErrorDataDetails struct {
+	Id   string `json:"id"`
+	Data string `json:"data"`
 }
 
-func ConvertExceptionDataToExceptionDataResponse(t []dto.ExceptionTableDto) (ExceptionDataResponse, *error) {
-	respMap := make(map[string]ExceptionDataDetails)
-	resp := ExceptionDataResponse{}
+func ConvertErrorDataToErrorDataResponse(t []dto.ErrorDataTableDto) (ErrorDataResponse, *error) {
+	respList := make([]ErrorDataDetails, 0)
+	var resp ErrorDataResponse
 
 	for _, v := range t {
-		var exceptionDecompressedStr string
+		var errorDecompressedStr string
 		var err error
-		if v.ExceptionBody != nil && len(v.ExceptionBody) != 0 {
-			exceptionDecompressedStr, err = crypto.DecompressStringGzip(v.ExceptionBody)
+		if v.Data != nil && len(v.Data) != 0 {
+			errorDecompressedStr, err = crypto.DecompressStringGzip(v.Data)
 			if err != nil {
-				zkLogger.Error(LogTag, "error decompressing exception body", err)
+				zkLogger.Error(LogTag, "error decompressing error body", err)
 				return resp, &err
 			}
 		}
 
-		s := ExceptionDataDetails{
-			Id:            v.Id,
-			ExceptionBody: exceptionDecompressedStr,
+		s := ErrorDataDetails{
+			Id:   v.Id,
+			Data: errorDecompressedStr,
 		}
 
-		respMap[v.Id] = s
+		respList = append(respList, s)
 	}
 
-	resp.Exceptions = respMap
+	resp.Errors = respList
 	return resp, nil
 }

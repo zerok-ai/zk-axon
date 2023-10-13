@@ -24,7 +24,7 @@ type TracePersistenceService interface {
 	GetIncidentDetailsService(traceId, spanId string, offset, limit int) (traceResponse.IncidentDetailsResponse, *zkErrors.ZkError)
 	GetSpanRawDataService(traceId, spanId string) (traceResponse.SpanRawDataResponse, *zkErrors.ZkError)
 	GetIncidentListServiceForScenarioId(scenarioId, issueHash string, offset, limit int) (traceResponse.IncidentDetailListResponse, *zkErrors.ZkError)
-	GetExceptionDataService(traceId string, spanId string) (traceResponse.ExceptionDataResponse, *zkErrors.ZkError)
+	GetErrorDataService(errorIds []string) (traceResponse.ErrorDataResponse, *zkErrors.ZkError)
 }
 
 func NewScenarioPersistenceService(repo repository.TracePersistenceRepo) TracePersistenceService {
@@ -257,18 +257,18 @@ func (s tracePersistenceService) GetSpanRawDataService(traceId, spanId string) (
 	return response, nil
 }
 
-func (s tracePersistenceService) GetExceptionDataService(traceId string, spanId string) (traceResponse.ExceptionDataResponse, *zkErrors.ZkError) {
-	var response traceResponse.ExceptionDataResponse
+func (s tracePersistenceService) GetErrorDataService(errorIds []string) (traceResponse.ErrorDataResponse, *zkErrors.ZkError) {
+	var response traceResponse.ErrorDataResponse
 
-	data, err := s.repo.GetExceptionData(traceId, spanId)
+	data, err := s.repo.GetErrorData(errorIds)
 	if err != nil {
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorDbError, nil)
 		return response, &zkErr
 	}
 
-	response, respErr := traceResponse.ConvertExceptionDataToExceptionDataResponse(data)
+	response, respErr := traceResponse.ConvertErrorDataToErrorDataResponse(data)
 	if respErr != nil {
-		zkLogger.Error(LogTag, "failed to convert exception data to response", err)
+		zkLogger.Error(LogTag, "failed to convert error data to response", err)
 		zkErr := zkErrors.ZkErrorBuilder{}.Build(zkErrors.ZkErrorInternalServer, nil)
 		return response, &zkErr
 	}
