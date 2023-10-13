@@ -2,11 +2,15 @@ package handler
 
 import (
 	"axon/internal/config"
+	"axon/internal/scenarioDataPersistence/model/request"
 	traceResponse "axon/internal/scenarioDataPersistence/model/response"
 	"axon/internal/scenarioDataPersistence/service"
 	"axon/internal/scenarioDataPersistence/validation"
 	"axon/utils"
+	zkErrorsAxon "axon/utils/zkerrors"
+	"encoding/json"
 	"github.com/kataras/iris/v12"
+	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	"github.com/zerok-ai/zk-utils-go/zkerrors"
@@ -21,7 +25,7 @@ type TracePersistenceHandler interface {
 	GetIncidentDetailsHandler(ctx iris.Context)
 	GetSpanRawDataHandler(ctx iris.Context)
 	GetIncidentListForScenarioId(ctx iris.Context)
-	GetExceptionDataHandler(ctx iris.Context)
+	GetErrorDataHandler(ctx iris.Context)
 }
 
 var LogTag = "trace_persistence_handler"
@@ -230,24 +234,48 @@ func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
-func (t tracePersistenceHandler) GetExceptionDataHandler(ctx iris.Context) {
-	traceId := ctx.Params().Get(utils.IncidentId)
-	spanId := ctx.Params().Get(utils.SpanId)
+func (t tracePersistenceHandler) GetErrorDataHandler(ctx iris.Context) {
+	var errorReq request.GetErrorRequest
+	body, err := ctx.GetBody()
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("Error reading request body")
+		return
+	}
 
-	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.ExceptionDataResponse]
+	err = json.Unmarshal(body, &errorReq)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("Error decoding JSON")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.ErrorDataResponse]
 	var zkErr *zkerrors.ZkError
-	var resp traceResponse.ExceptionDataResponse
+	var resp traceResponse.ErrorDataResponse
 
-	if zkErr := validation.ValidateGetSpanRawDataApi(traceId, spanId); zkErr != nil {
-		zkLogger.Error(LogTag, "Error while validating GetSpanRawDataHandler api", zkErr)
+	if zkErr = validation.ValidateGetErrors(errorReq.ErrorIds); zkErr != nil {
+		zkLogger.Error(LogTag, "Error while validating GetErrorHandler api", zkErr)
 	} else {
-		resp, zkErr = t.service.GetExceptionDataService(traceId, spanId)
+		sanitizedErrorIds := make([]string, 0)
+		for _, errorId := range errorReq.ErrorIds {
+			if !zkCommon.IsEmpty(errorId) {
+				sanitizedErrorIds = append(sanitizedErrorIds, errorId)
+			}
+		}
+		if len(sanitizedErrorIds) == 0 {
+			zkErr = zkCommon.ToPtr(zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestErrorIdListIdEmpty, nil))
+			zkLogger.Error(LogTag, "Error while validating GetErrorHandler api", zkErr)
+			return
+		} else {
+			resp, zkErr = t.service.GetErrorDataService(errorReq.ErrorIds)
+		}
 	}
 
 	if t.cfg.Http.Debug {
-		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.ExceptionDataResponse](200, resp, resp, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.ErrorDataResponse](200, resp, resp, zkErr)
 	} else {
-		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.ExceptionDataResponse](200, resp, nil, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[traceResponse.ErrorDataResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)

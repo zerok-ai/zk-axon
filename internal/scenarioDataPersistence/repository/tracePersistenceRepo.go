@@ -23,7 +23,7 @@ const (
 	GetSpanQueryUsingTraceId                                     = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username, source_ip, destination_ip, service_name, error_type, error_table_id FROM span WHERE trace_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3"
 	GetSpanQueryUsingTraceIdAndSpanId                            = "SELECT trace_id, parent_span_id, span_id, is_root, kind, start_time, latency, source, destination, workload_id_list, protocol, issue_hash_list, request_payload_size, response_payload_size, method, route, scheme, path, query, status, metadata, username, source_ip, destination_ip, service_name, error_type, error_table_id FROM span WHERE trace_id=$1 AND span_id=$2"
 	GetSpanRawDataQuery                                          = "SELECT span.trace_id, span.span_id, req_headers, resp_headers, is_truncated, req_body, resp_body, protocol FROM span_raw_data INNER JOIN span ON span.span_id = span_raw_data.span_id AND span.trace_id = span_raw_data.trace_id WHERE span.trace_id=$1 AND span.span_id=$2"
-	GetExceptionDataQuery                                        = "SELECT exception_data.id, exception_body FROM span INNER JOIN exception_data ON span.error_table_id = exception_data.id WHERE span.trace_id=$1 AND span.span_id=$2"
+	GetErrorDataQuery                                            = "SELECT id, data FROM errors_data WHERE id=ANY($1)"
 	GetTraceQueryByScenarioId                                    = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3 AND issue.issue_hash=$4) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $5 OFFSET $6"
 	GetTraceQueryByScenarioIdWithoutIssueHashFilter              = "SELECT CASE WHEN $1 THEN COUNT(*) OVER() ELSE 0 END AS total_rows, trace_id, incident_collection_time, source, path, protocol, start_time, latency FROM (SELECT DISTINCT ON (incident.trace_id) incident.trace_id, incident.incident_collection_time, span.source, span.path, span.protocol, span.start_time, span.latency FROM issue INNER JOIN incident ON issue.issue_hash = incident.issue_hash INNER JOIN span ON incident.trace_id = span.trace_id WHERE issue.scenario_id = $2 AND span.is_root=$3) AS distinct_incidents ORDER BY incident_collection_time DESC LIMIT $4 OFFSET $5"
 )
@@ -38,7 +38,7 @@ type TracePersistenceRepo interface {
 	GetTracesForScenarioId(scenarioId, issueHash string, limit, offset int) ([]dto.IncidentTableDto, error)
 	GetSpans(traceId, spanId string, offset, limit int) ([]dto.SpanTableDto, error)
 	GetSpanRawData(traceId, spanId string) ([]dto.SpanRawDataDetailsDto, error)
-	GetExceptionData(traceId string, spanId string) ([]dto.ExceptionTableDto, error)
+	GetErrorData(errorIds pq.StringArray) ([]dto.ErrorDataTableDto, error)
 }
 
 type tracePersistenceRepo struct {
@@ -307,21 +307,21 @@ func (z tracePersistenceRepo) GetSpanRawData(traceId, spanId string) ([]dto.Span
 	return data, nil
 }
 
-func (z tracePersistenceRepo) GetExceptionData(traceId string, spanId string) ([]dto.ExceptionTableDto, error) {
-	rows, err, closeRow := z.dbRepo.GetAll(GetExceptionDataQuery, []any{traceId, spanId})
+func (z tracePersistenceRepo) GetErrorData(errorIds pq.StringArray) ([]dto.ErrorDataTableDto, error) {
+	rows, err, closeRow := z.dbRepo.GetAll(GetErrorDataQuery, []any{errorIds})
 	defer closeRow()
 
 	if err != nil || rows == nil {
-		zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s", traceId, spanId), err)
+		zkLogger.Error(LogTag, fmt.Sprintf("errorId: %s", errorIds), err)
 		return nil, err
 	}
 
-	var data []dto.ExceptionTableDto
+	var data []dto.ErrorDataTableDto
 	for rows.Next() {
-		var rawData dto.ExceptionTableDto
-		err := rows.Scan(&rawData.Id, &rawData.ExceptionBody)
+		var rawData dto.ErrorDataTableDto
+		err := rows.Scan(&rawData.Id, &rawData.Data)
 		if err != nil {
-			zkLogger.Error(LogTag, fmt.Sprintf("trace_id: %s, span_id: %s, exception not fetched", traceId, spanId), err)
+			zkLogger.Error(LogTag, fmt.Sprintf("errorId: %s, error not fetched", errorIds), err)
 			continue
 		}
 

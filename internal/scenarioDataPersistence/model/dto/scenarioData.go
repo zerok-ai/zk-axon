@@ -84,7 +84,7 @@ type SpanRawDataDetailsDto struct {
 	RespBody    []byte `json:"resp_body"`
 }
 
-type ExceptionTableDto struct {
-	Id            string `json:"id"`
-	ExceptionBody []byte `json:"exception_body"`
+type ErrorDataTableDto struct {
+	Id   string `json:"id"`
+	Data []byte `json:"data"`
 }
