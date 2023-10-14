@@ -6,6 +6,7 @@ data:
       host: localhost
       port: 80
     redis:
+      host: {{ .Values.redis.host }}
       port: {{ .Values.redis.port }}
       readTimeout: {{ .Values.redis.readTimeout }}
       dbs:
