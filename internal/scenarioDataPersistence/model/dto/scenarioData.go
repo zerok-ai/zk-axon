@@ -43,8 +43,7 @@ type SpanTableDto struct {
 	SourceIP            string         `json:"source_ip"`
 	DestinationIP       string         `json:"destination_ip"`
 	ServiceName         string         `json:"service_name"`
-	ErrorType           string         `json:"error_type"`
-	ErrorTableId        string         `json:"error_table_id"`
+	Errors              string         `json:"errors"`
 }
 
 type IssueDetailsDto struct {

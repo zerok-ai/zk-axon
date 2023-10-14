@@ -39,8 +39,7 @@ type SpanDetails struct {
 	SourceIP            string         `json:"source_ip"`
 	DestinationIP       string         `json:"destination_ip"`
 	ServiceName         string         `json:"service_name"`
-	ErrorType           string         `json:"error_type"`
-	ErrorTableId        string         `json:"error_table_id"`
+	Errors              string         `json:"errors"`
 }
 
 func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetailsResponse {
@@ -73,8 +72,7 @@ func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetails
 			SourceIP:            v.SourceIP,
 			DestinationIP:       v.DestinationIP,
 			ServiceName:         v.ServiceName,
-			ErrorType:           v.ErrorType,
-			ErrorTableId:        v.ErrorTableId,
+			Errors:              v.Errors,
 		}
 
 		respMap[v.SpanID] = s
