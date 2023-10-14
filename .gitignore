@@ -1,6 +1,7 @@
 .tmp
 .idea/
 vendor/
+bin/
 main
 coverage.out
 
