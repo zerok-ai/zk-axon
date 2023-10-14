@@ -2,10 +2,14 @@ package main
 
 import (
 	"axon/internal/config"
+	integrations "axon/internal/integrations"
+	"axon/internal/prometheus"
+	promHandler "axon/internal/prometheus/handler"
+	promService "axon/internal/prometheus/service"
 	"axon/internal/scenarioDataPersistence"
-	"axon/internal/scenarioDataPersistence/handler"
-	"axon/internal/scenarioDataPersistence/repository"
-	"axon/internal/scenarioDataPersistence/service"
+	scenarioHandler "axon/internal/scenarioDataPersistence/handler"
+	scenarioRepository "axon/internal/scenarioDataPersistence/repository"
+	scenarioService "axon/internal/scenarioDataPersistence/service"
 	"github.com/kataras/iris/v12"
 	zkConfig "github.com/zerok-ai/zk-utils-go/config"
 	zkHttpConfig "github.com/zerok-ai/zk-utils-go/http/config"
@@ -25,29 +29,49 @@ func main() {
 	zkLogger.Info(LogTag, "********* Initializing Application *********")
 	zkHttpConfig.Init(cfg.Http.Debug)
 	zkLogger.Init(cfg.LogsConfig)
-	zkPostgresRepo, err := zkPostgres.NewZkPostgresRepo(cfg.Postgres)
-	if err != nil {
-		return
-	}
 
-	zkLogger.Debug(LogTag, "Parsed Configuration", cfg)
+	app := newApp()
+	v1 := app.Party("/v1")
 
-	tpr := repository.NewTracePersistenceRepo(zkPostgresRepo)
-	tps := service.NewScenarioPersistenceService(tpr)
-	tph := handler.NewTracePersistenceHandler(tps, cfg)
+	tracePersistenceHandler, tracePersistenceService, _ := getTracePersistenceHandler(cfg)
+	scenarioDataPersistence.Initialize(v1, tracePersistenceHandler)
 
-	app := newApp(tph)
+	integrationsManager := integrations.NewIntegrationsManager(&cfg, &tracePersistenceService)
+
+	promQueryHandler, _ := getPrometheusHandler(cfg, *integrationsManager)
+	prometheus.Initialize(v1, promQueryHandler)
 
 	configurator := iris.WithConfiguration(iris.Configuration{
 		DisablePathCorrection: true,
 		LogLevel:              cfg.LogsConfig.Level,
 	})
-	if err = app.Listen(":"+cfg.Server.Port, configurator); err != nil {
+	if err := app.Listen(":"+cfg.Server.Port, configurator); err != nil {
 		panic(err)
 	}
 }
 
-func newApp(tph handler.TracePersistenceHandler) *iris.Application {
+func getPrometheusHandler(cfg config.AppConfigs, integrationsManager integrations.IntegrationsManager) (promHandler.PrometheusHandler, promService.PrometheusService) {
+	promSvc := promService.NewPrometheusService(integrationsManager)
+	promH := promHandler.NewPrometheusHandler(promSvc, integrationsManager.GetTracePersistenceService(), cfg)
+
+	return promH, promSvc
+}
+
+func getTracePersistenceHandler(cfg config.AppConfigs) (scenarioHandler.TracePersistenceHandler, scenarioService.TracePersistenceService, scenarioRepository.TracePersistenceRepo) {
+	zkPostgresRepo, err := zkPostgres.NewZkPostgresRepo(cfg.Postgres)
+	if err != nil {
+		return nil, nil, nil
+	}
+
+	zkLogger.Debug(LogTag, "Parsed Configuration", cfg)
+
+	tpr := scenarioRepository.NewTracePersistenceRepo(zkPostgresRepo)
+	tps := scenarioService.NewScenarioPersistenceService(tpr)
+	tph := scenarioHandler.NewTracePersistenceHandler(tps, cfg)
+	return tph, tps, tpr
+}
+
+func newApp() *iris.Application {
 	app := iris.Default()
 
 	crs := func(ctx iris.Context) {
@@ -77,9 +101,6 @@ func newApp(tph handler.TracePersistenceHandler) *iris.Application {
 	app.Get("/healthz", func(ctx iris.Context) {
 		ctx.WriteString("pong")
 	}).Describe("healthcheck")
-
-	v1 := app.Party("/v1")
-	scenarioDataPersistence.Initialize(v1, tph)
 
 	return app
 }

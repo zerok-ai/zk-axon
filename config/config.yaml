@@ -7,7 +7,7 @@ logs:
   level: DEBUG
 
 http:
-  debug: true
+  debug: false
 
 postgres:
   host: localhost
@@ -18,3 +18,14 @@ postgres:
   max_connections: 5
   max_idle_connections: 5
   connection_max_lifetime_in_minutes: 10
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  dbs:
+    traces: 1
+    otel: 3
+    scenarios: 6
+    integrations: 9
+  readTimeout: 20
+  password: "D2sFrB00RM"

@@ -22,7 +22,7 @@ type TracePersistenceHandler interface {
 	GetScenarioDetailsHandler(ctx iris.Context)
 	GetIssueDetailsHandler(ctx iris.Context)
 	GetIncidentListHandler(ctx iris.Context)
-	GetIncidentDetailsHandler(ctx iris.Context)
+	GetPodDetailsHandler(ctx iris.Context)
 	GetSpanRawDataHandler(ctx iris.Context)
 	GetIncidentListForScenarioId(ctx iris.Context)
 	GetErrorDataHandler(ctx iris.Context)
@@ -176,7 +176,7 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
-func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
+func (t tracePersistenceHandler) GetPodDetailsHandler(ctx iris.Context) {
 
 	// We can remove it from the url path. Trace_id is enough to identify everything. I'll add a to do as this would also require frontend changes.
 	// TODO: The url path has issueHash, but we are not reading it here, remove from here and frontend.
@@ -190,7 +190,7 @@ func (t tracePersistenceHandler) GetIncidentDetailsHandler(ctx iris.Context) {
 	var resp traceResponse.IncidentDetailsResponse
 
 	if zkErr := validation.ValidateGetIncidentDetailsApi(traceId, offset, limit); zkErr != nil {
-		zkLogger.Error(LogTag, "Error while validating GetIncidentDetailsHandler api", zkErr)
+		zkLogger.Error(LogTag, "Error while validating GetPodDetailsHandler api", zkErr)
 	} else {
 		l, _ := strconv.Atoi(limit)
 		o, _ := strconv.Atoi(offset)

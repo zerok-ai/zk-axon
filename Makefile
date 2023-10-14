@@ -32,6 +32,9 @@ docker-build-push-gke: docker-build-gke docker-push-gke
 run: build
 	go run cmd/main.go -c ./config/config.yaml 2>&1 | grep -v '^(0x'
 
+dev: sync
+	nodemon --watch './**/*.go' --signal SIGTERM --exec make run
+
 fmt:
 	gofmt -s -w .
 
