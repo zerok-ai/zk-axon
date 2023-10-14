@@ -5,6 +5,14 @@ data:
     server:
       host: localhost
       port: 80
+    redis:
+      port: {{ .Values.redis.port }}
+      readTimeout: {{ .Values.redis.readTimeout }}
+      dbs:
+        traces: {{ .Values.redis.dbs.traces }}
+        otel: {{ .Values.redis.dbs.otel }}
+        scenarios: {{ .Values.redis.dbs.scenarios }}
+        integrations: {{ .Values.redis.dbs.integrations }}
     logs:
       color: true
       level: DEBUG

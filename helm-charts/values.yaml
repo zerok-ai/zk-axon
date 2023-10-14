@@ -28,6 +28,16 @@ postgres:
   max_idle_connections: 5
   connection_max_lifetime_in_minutes: 10
 
+redis:
+  host: redis.zk-client.svc.cluster.local
+  port: 6379
+  readTimeout: 20
+  dbs:
+    traces: 1
+    otel: 3
+    scenarios: 6
+    integrations: 9
+
 image:
   repo: "zk-axon"
   tag: "latest"
