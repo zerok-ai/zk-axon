@@ -102,12 +102,14 @@ func (s prometheusService) GetPodsInfoService(podInfoReq request.PromRequestMeta
 	var response promResponse.PodsInfoResponse
 	metricServerRepo := s.GetMetricServerRepo()
 	if metricServerRepo == nil {
+		zkLogger.Error(LogTag, "No metric server found")
 		respErr := zkUtils.BuildZkError(LogTag, "No metric server found")
 		return response, respErr
 	}
 	podsInfo, err := metricServerRepo.PodsInfoQuery(podInfoReq)
 	if err != nil {
-		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting podInfo: ", err.Error())
+		zkLogger.Error(LogTag, "Error while collecting podInfo: ", err.Error())
+		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting podInfo")
 		return response, respErr
 	}
 
@@ -125,7 +127,8 @@ func (s prometheusService) GetContainerInfoService(podInfoReq request.PromReques
 	}
 	podContainerInfo, err := metricServerRepo.PodContainerInfoQuery(podInfoReq)
 	if err != nil {
-		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting podContainerInfo: ", err.Error())
+		zkLogger.Error(LogTag, "Error while collecting podContainerInfo: ", err.Error())
+		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting podContainerInfo")
 		return response, respErr
 	}
 	podContainerInfoItems := extractMetricAttributes(podContainerInfo)
@@ -143,14 +146,16 @@ func (s prometheusService) GetContainerMetricService(podInfoReq request.PromRequ
 
 	cpuUsageData, err := metricServerRepo.GetPodCPUUsage(podInfoReq)
 	if err != nil {
-		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting cpuUsageData: ", err.Error())
+		zkLogger.Error(LogTag, "Error while collecting cpuUsageData: ", err.Error())
+		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting cpuUsageData")
 		return response, respErr
 	}
 	cpuUsage := promResponse.ConvertMetricToPodUsage(cpuUsageData)
 
 	memUsageData, err := metricServerRepo.GetPodMemoryUsage(podInfoReq)
 	if err != nil {
-		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting cpuUsageData: ", err.Error())
+		zkLogger.Error(LogTag, "Error while collecting cpuUsageData: ", err.Error())
+		respErr := zkUtils.BuildZkError(LogTag, "Error while collecting cpuUsageData")
 		return response, respErr
 	}
 	memUsage := promResponse.ConvertMetricToPodUsage(memUsageData)
