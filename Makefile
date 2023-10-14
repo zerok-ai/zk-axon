@@ -8,6 +8,7 @@ PROJECT_ID ?= zerok-dev
 REPOSITORY ?= zk-axon
 
 BUILDER_NAME = multi-platform-builder
+IMAGE_PREFIX := $(LOCATION)-docker.pkg.dev/$(PROJECT_ID)/$(REPOSITORY)/
 
 export GO111MODULE=on
 export GOPRIVATE=github.com/zerok-ai/zk-utils-go,github.com/zerok-ai/zk-rawdata-reader
@@ -29,7 +30,7 @@ build-multiarch: sync
 	docker buildx rm ${BUILDER_NAME} || true
 	docker buildx create --use --platform=linux/arm64,linux/amd64 --name ${BUILDER_NAME}
 	docker buildx build --platform=linux/arm64,linux/amd64 --push \
-	--tag $(IMAGE_PREFIX)$(IMAGE_NAME):$(IMAGE_VERSION_MULTI_ARCH) .
+	--tag $(IMAGE_PREFIX)$(IMAGE_NAME):$(IMAGE_VERSION) .
 	docker buildx rm ${BUILDER_NAME}
 
 docker-build-gke: IMAGE_PREFIX := $(LOCATION)-docker.pkg.dev/$(PROJECT_ID)/$(REPOSITORY)/
