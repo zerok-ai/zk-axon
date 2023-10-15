@@ -51,7 +51,7 @@ type AppConfigs struct {
 	Router     RouterConfigs                   `yaml:"router"`
 	Greeting   string                          `env:"GREETING" env-description:"Greeting phrase" env-default:"Hello!"`
 	SuprSend   SuprSendConfig                  `yaml:"suprsend"`
-	Redis      *config.RedisConfig
+	Redis      config.RedisConfig
 }
 
 // Args command-line parameters

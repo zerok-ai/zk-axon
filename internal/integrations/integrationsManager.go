@@ -24,7 +24,7 @@ func NewIntegrationsManager(cfg *config.AppConfigs, tracePersistenceService *tra
 	for name, db := range cfg.Redis.DBs {
 		zkLogger.Error(LogTag, name, db)
 	}
-	integrationsStore, err := store.GetVersionedStore[dto.Integration](cfg.Redis, "integrations", refreshInterval)
+	integrationsStore, err := store.GetVersionedStore[dto.Integration](&cfg.Redis, "integrations", refreshInterval)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error creating integrationsMap store: %v\n", err)
 		return nil
