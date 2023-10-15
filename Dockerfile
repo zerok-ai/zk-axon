@@ -1,18 +1,16 @@
-FROM golang:1.18-alpine
-
+FROM alpine:latest
 WORKDIR /zk
 
-# amd64 is default architecture for the image.
-RUN echo "Copying Amd64 file."
-COPY bin/zk-axon-amd64 /zk/zk-axon-amd64
+# base name of the executable
+ENV exeBaseName="zk-axon"
 
-COPY app-start.sh /zk/app-start.sh
+# full path to the all the executables
+ENV exeAMD64="bin/${exeBaseName}-amd64"
+ENV exeARM64="bin/${exeBaseName}-arm64"
 
-# The preceding star will make the file copy only if it exists
-COPY *bin/zk-axon-arm64 /zk/zk-axon-arm64
+# copy the executables
+COPY "$exeAMD64" .
+COPY "$exeARM64" .
 
-RUN chmod +x /zk/*
-
-# Run the start script
-#CMD ["/zk/zk-axon", "-c", "/zk/config/config.yaml"]
-CMD ["./app-start.sh","-amd64","zk-axon-amd64","-arm64","zk-axon-arm64","-c","/zk/config/config.yaml"]
+# call the start script
+CMD ["./app-start.sh","--amd64","$exeAMD64","--arm64","$exeARM64", "-c", "config/config.yaml"]
