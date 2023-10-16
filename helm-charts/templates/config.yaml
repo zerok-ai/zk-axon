@@ -6,8 +6,8 @@ data:
       host: localhost
       port: 80
     logs:
-      color: true
-      level: DEBUG
+      color: {{ .Values.serviceConfigs.logs.color }}
+      level: {{ .Values.serviceConfigs.logs.level }}
     http:
       debug: true
     postgres:

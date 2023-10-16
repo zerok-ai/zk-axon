@@ -3,6 +3,12 @@ global:
   dockerBase: "us-west1-docker.pkg.dev/zerok-dev/zk-client"
 
 kubernetesClusterDomain: cluster.local
+
+serviceConfigs:
+  logs:
+    color: true
+    level: DEBUG
+
 zkAxon:
   ports:
   - port: 80
