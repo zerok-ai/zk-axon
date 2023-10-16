@@ -8,6 +8,15 @@ data:
     logs:
       color: {{ .Values.serviceConfigs.logs.color }}
       level: {{ .Values.serviceConfigs.logs.level }}
+    redis:
+      host: {{ .Values.redis.host }}
+      port: {{ .Values.redis.port }}
+      readTimeout: {{ .Values.redis.readTimeout }}
+      dbs:
+        traces: {{ .Values.redis.dbs.traces }}
+        otel: {{ .Values.redis.dbs.otel }}
+        scenarios: {{ .Values.redis.dbs.scenarios }}
+        integrations: {{ .Values.redis.dbs.integrations }}
     http:
       debug: true
     postgres:

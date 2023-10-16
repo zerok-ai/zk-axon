@@ -2,31 +2,38 @@ package scenariodataresponse
 
 import (
 	"axon/internal/scenarioDataPersistence/model/dto"
+	"axon/utils"
+	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	"time"
 )
 
 var LogTag = "scenario_response"
 
-type IncidentListResponse struct {
-	TraceIdList []string `json:"trace_id_list"`
+type IncidentIdListResponse struct {
+	TraceIdList  []string `json:"trace_id_list"`
+	TotalRecords int      `json:"total_records"`
 }
 
-func ConvertIncidentTableDtoToIncidentListResponse(t []dto.IncidentTableDto) *IncidentListResponse {
+func ConvertIncidentTableDtoToIncidentListResponse(t []dto.IncidentTableDto) *IncidentIdListResponse {
 	traceIdList := make([]string, 0)
 	for _, v := range t {
 		traceIdList = append(traceIdList, v.TraceId)
 	}
 
-	return &IncidentListResponse{TraceIdList: traceIdList}
+	if len(traceIdList) > 0 {
+		return &IncidentIdListResponse{TraceIdList: traceIdList, TotalRecords: t[0].TotalRows}
+	}
+
+	return &IncidentIdListResponse{TraceIdList: traceIdList, TotalRecords: 0}
 }
 
 type IssueDetails struct {
-	IssueId         string    `json:"issue_hash"`
+	IssueHash       string    `json:"issue_hash"`
 	IssueTitle      string    `json:"issue_title"`
 	ScenarioId      string    `json:"scenario_id"`
 	ScenarioVersion string    `json:"scenario_version"`
-	Source          string    `json:"source"`
-	Destination     string    `json:"destination"`
+	Sources         []string  `json:"sources"`
+	Destinations    []string  `json:"destinations"`
 	TotalCount      int       `json:"total_count"`
 	Velocity        float32   `json:"velocity"`
 	FirstSeen       time.Time `json:"first_seen"`
@@ -34,13 +41,33 @@ type IssueDetails struct {
 	Incidents       []string  `json:"incidents"`
 }
 
+type ScenarioDetails struct {
+	ScenarioId      string    `json:"scenario_id"`
+	ScenarioVersion string    `json:"scenario_version"`
+	Sources         []string  `json:"sources"`
+	Destinations    []string  `json:"destinations"`
+	TotalCount      int       `json:"total_count"`
+	Velocity        float32   `json:"velocity"`
+	FirstSeen       time.Time `json:"first_seen"`
+	LastSeen        time.Time `json:"last_seen"`
+}
+
 type IssueListWithDetailsResponse struct {
-	Issues []IssueDetails `json:"issues"`
+	Issues       []IssueDetails `json:"issues"`
+	TotalRecords int            `json:"total_records"`
+}
+
+type ScenarioDetailsResponse struct {
+	Scenarios []ScenarioDetails `json:"scenarios"`
+}
+
+type IssueDetailsResponse struct {
+	Issues IssueDetails `json:"issue"`
 }
 
 func ConvertIssueListDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDto) *IssueListWithDetailsResponse {
 	var resp IssueListWithDetailsResponse
-	var issuesList []IssueDetails
+	issuesList := make([]IssueDetails, 0)
 
 	for _, v := range t {
 		r := ConvertIssueDetailsDtoToIssueDetails(v)
@@ -48,8 +75,40 @@ func ConvertIssueListDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDt
 	}
 
 	resp.Issues = issuesList
+	if len(issuesList) > 0 {
+		resp.TotalRecords = t[0].TotalRows
+	}
 
 	return &resp
+}
+
+func ConvertScenarioDetailsDtoToScenarioDetailsResponse(t []dto.ScenarioDetailsDto) *ScenarioDetailsResponse {
+	var resp ScenarioDetailsResponse
+	scenarioDetails := make([]ScenarioDetails, 0)
+
+	for _, v := range t {
+		r := ConvertScenarioDetailsDtoToScenarioDetailsDetailsResponse(v)
+		scenarioDetails = append(scenarioDetails, r)
+	}
+
+	resp.Scenarios = scenarioDetails
+	return &resp
+}
+
+func ConvertIssueDetailsDtoToIssueListDetailsResponse(t []dto.IssueDetailsDto) IssueDetailsResponse {
+	var resp IssueDetailsResponse
+
+	if t != nil && len(t) > 0 {
+		resp.Issues = ConvertIssueDetailsDtoToIssueDetails(t[0])
+	} else {
+		return resp
+	}
+
+	if len(t) > 1 {
+		zkLogger.Info(LogTag, "IssueDetailsDto has more than one record")
+	}
+
+	return resp
 }
 
 type IssueWithDetailsResponse struct {
@@ -58,26 +117,39 @@ type IssueWithDetailsResponse struct {
 
 func ConvertIssueDetailsDtoToIssueDetails(v dto.IssueDetailsDto) IssueDetails {
 	var r IssueDetails
+	hours := utils.HoursBetween(v.FirstSeen, v.LastSeen) + 1
 
-	r.IssueId = v.IssueHash
+	r.IssueHash = v.IssueHash
 	r.IssueTitle = v.IssueTitle
 	r.ScenarioId = v.ScenarioId
 	r.ScenarioVersion = v.ScenarioVersion
-	r.Source = v.Source
-	r.Destination = v.Destination
+	r.Sources = v.Sources
+	r.Destinations = v.Destinations
 	r.TotalCount = v.TotalCount
-	r.Velocity = v.Velocity
+	r.Velocity = float32(v.TotalCount / hours)
 	r.FirstSeen = v.FirstSeen
 	r.LastSeen = v.LastSeen
-	if len(v.Incidents) >= 5 {
-		r.Incidents = v.Incidents[:5]
-	} else {
-		r.Incidents = v.Incidents
-	}
+	r.Incidents = v.Incidents
+	r.Sources = v.Sources
+	r.Destinations = v.Destinations
 
 	return r
 }
 
-func ConvertIssueToIssueDetailsResponse(t dto.IssueDetailsDto) IssueWithDetailsResponse {
-	return IssueWithDetailsResponse{Issue: ConvertIssueDetailsDtoToIssueDetails(t)}
+func ConvertScenarioDetailsDtoToScenarioDetailsDetailsResponse(v dto.ScenarioDetailsDto) ScenarioDetails {
+	var r ScenarioDetails
+	hours := utils.HoursBetween(v.FirstSeen, v.LastSeen) + 1
+
+	r.ScenarioId = v.ScenarioId
+	r.ScenarioVersion = v.ScenarioVersion
+	r.Sources = v.Sources
+	r.Destinations = v.Destinations
+	r.TotalCount = v.TotalCount
+	r.Velocity = float32(v.TotalCount / hours)
+	r.FirstSeen = v.FirstSeen
+	r.LastSeen = v.LastSeen
+	r.Sources = v.Sources
+	r.Destinations = v.Destinations
+
+	return r
 }

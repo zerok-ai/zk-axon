@@ -1,0 +1,31 @@
+server:
+  host: localhost
+  port: 80
+
+logs:
+  color: true
+  level: DEBUG
+
+http:
+  debug: false
+
+postgres:
+  host: localhost
+  port: 5432
+  user: "postgres"
+  password: "eo1Mgtm6HI"
+  dbname: "pl"
+  max_connections: 5
+  max_idle_connections: 5
+  connection_max_lifetime_in_minutes: 10
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  dbs:
+    traces: 1
+    otel: 3
+    scenarios: 6
+    integrations: 9
+  readTimeout: 20
+  password: "D2sFrB00RM"

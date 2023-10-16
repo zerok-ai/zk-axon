@@ -2,17 +2,23 @@ package scenarioDataPersistence
 
 import (
 	"axon/internal/scenarioDataPersistence/handler"
+	"axon/utils"
 	"github.com/kataras/iris/v12/core/router"
 )
 
 func Initialize(app router.Party, tph handler.TracePersistenceHandler) {
 
-	ruleEngineAPI := app.Party("/c/issue")
+	ruleEngineAPI := app.Party("/c/axon")
 	{
-		ruleEngineAPI.Get("/", tph.GetIssuesListWithDetailsHandler)
-		ruleEngineAPI.Get("/{issueId}", tph.GetIssueDetailsHandler)
-		ruleEngineAPI.Get("/{issueId}/incident", tph.GetIncidentListHandler)
-		ruleEngineAPI.Get("/{issueId}/incident/{incidentId}", tph.GetIncidentDetailsHandler)
-		ruleEngineAPI.Get("/{issueId}/incident/{incidentId}/span/{spanId}", tph.GetSpanRawDataHandler)
+		ruleEngineAPI.Get("/issue", tph.GetIssuesListWithDetailsHandler)
+		//Done
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}", tph.GetIssueDetailsHandler)
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident", tph.GetIncidentListHandler)
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident/{"+utils.IncidentId+"}", tph.GetPodDetailsHandler)
+		ruleEngineAPI.Get("/issue/{"+utils.IssueHash+"}/incident/{"+utils.IncidentId+"}/span/{"+utils.SpanId+"}", tph.GetSpanRawDataHandler)
+		ruleEngineAPI.Post("/issue/error", tph.GetErrorDataHandler)
+
+		ruleEngineAPI.Get("/scenario", tph.GetScenarioDetailsHandler)
+		ruleEngineAPI.Get("/scenario/{"+utils.ScenarioId+"}/incident", tph.GetIncidentListForScenarioId)
 	}
 }
