@@ -33,7 +33,7 @@ type SpanDetails struct {
 	Scheme              string         `json:"scheme"`
 	Path                string         `json:"path"`
 	Query               string         `json:"query"`
-	Status              int            `json:"status"`
+	Status              *int           `json:"status"`
 	Metadata            *string        `json:"metadata,omitempty"`
 	Username            string         `json:"username"`
 	SourceIP            string         `json:"source_ip"`
