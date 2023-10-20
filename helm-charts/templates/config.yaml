@@ -5,9 +5,6 @@ data:
     server:
       host: localhost
       port: 80
-    logs:
-      color: {{ .Values.serviceConfigs.logs.color }}
-      level: {{ .Values.serviceConfigs.logs.level }}
     redis:
       host: {{ .Values.redis.host }}
       port: {{ .Values.redis.port }}
@@ -17,6 +14,9 @@ data:
         otel: {{ .Values.redis.dbs.otel }}
         scenarios: {{ .Values.redis.dbs.scenarios }}
         integrations: {{ .Values.redis.dbs.integrations }}
+    logs:
+      color: {{ .Values.serviceConfigs.logs.color }}
+      level: {{ .Values.serviceConfigs.logs.level }}
     http:
       debug: true
     postgres:
