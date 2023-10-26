@@ -14,12 +14,12 @@ func getPodsAndNSListFromTrace(traceId string, tps tracePersistence.TracePersist
 		return nil, nil, err
 	}
 	podsMap := make(map[string]bool)
-	spamItems := spansList.Spans
-	for _, spanItems := range spamItems {
+	spanItems := spansList.Spans
+	for _, spanItems := range spanItems {
 		if spanItems.Source != "" {
 			podsMap[spanItems.Source] = true
 		}
-		if spanItems.Destination == "" {
+		if spanItems.Destination != "" {
 			podsMap[spanItems.Destination] = true
 		}
 	}
