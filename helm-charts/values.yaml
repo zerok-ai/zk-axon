@@ -17,10 +17,6 @@ zkAxon:
     requests:
       cpu: 100m
       memory: 64Mi
-serviceConfigs:
-  logs:
-    color: true
-    level: DEBUG
 
 postgres:
   host: "postgres.zk-client.svc.cluster.local"

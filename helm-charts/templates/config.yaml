@@ -15,8 +15,8 @@ data:
         scenarios: {{ .Values.redis.dbs.scenarios }}
         integrations: {{ .Values.redis.dbs.integrations }}
     logs:
-      color: {{ .Values.serviceConfigs.logs.color }}
-      level: {{ .Values.serviceConfigs.logs.level }}
+      color: true
+      level: DEBUG
     http:
       debug: true
     postgres:
