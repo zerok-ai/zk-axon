@@ -11,7 +11,7 @@ http:
 
 postgres:
   host: localhost
-  port: 5432
+  port: 5411
   user: "postgres"
   password: "eo1Mgtm6HI"
   dbname: "pl"
@@ -28,4 +28,4 @@ redis:
     scenarios: 6
     integrations: 9
   readTimeout: 20
-  password: "D2sFrB00RM"
+  password: "RUZpgGGfsW"

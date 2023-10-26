@@ -14,7 +14,7 @@ import (
 func generatePromRequestMetadata(ctx iris.Context) request.PromRequestMeta {
 	// Calculate the start and end times for the time range
 	endTimeQP := ctx.URLParamDefault(utils.TimeQueryParam, time.Now().Format(time.Second.String()))
-	durationQP := ctx.URLParamDefault(utils.DurationQueryParam, "10m")
+	durationQP := ctx.URLParamDefault(utils.DurationQueryParam, "-10m")
 	intervalQP := ctx.URLParamDefault(utils.RateIntervalQueryParam, "1m")
 
 	endTime, err := time.Parse(time.Second.String(), endTimeQP)

@@ -11,7 +11,7 @@ import (
 
 const (
 	LogTag          = "integrations_manager"
-	refreshInterval = 20 * time.Minute
+	refreshInterval = 5 * time.Minute
 )
 
 type IntegrationsManager struct {
