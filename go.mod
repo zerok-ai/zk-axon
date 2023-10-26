@@ -1,8 +1,6 @@
 module axon
 
-go 1.21
-
-toolchain go1.21.1
+go 1.20
 
 require github.com/zerok-ai/zk-utils-go v0.5.5
 
