@@ -3,27 +3,31 @@ package handler
 import (
 	"axon/internal/prometheus/model/request"
 	"axon/utils"
+	"fmt"
 	"github.com/kataras/iris/v12"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	zkErrors "github.com/zerok-ai/zk-utils-go/zkerrors"
+	"strconv"
 	"strings"
 	"time"
 )
 
 func generatePromRequestMetadata(ctx iris.Context) request.PromRequestMeta {
 	// Calculate the start and end times for the time range
-	endTimeQP := ctx.URLParamDefault(utils.TimeQueryParam, time.Now().Format(time.Second.String()))
+	//endTimeQP := ctx.URLParamDefault(utils.TimeQueryParam, time.Now().Format(time.Second.String()))
+	endTimeQP := ctx.URLParamDefault(utils.TimeQueryParam, fmt.Sprintf("%d", time.Now().Unix()))
 	durationQP := ctx.URLParamDefault(utils.DurationQueryParam, "-10m")
 	intervalQP := ctx.URLParamDefault(utils.RateIntervalQueryParam, "1m")
 
-	endTime, err := time.Parse(time.Second.String(), endTimeQP)
+	//endTime, err := time.Parse(time.Second.String(), endTimeQP)
+	endTimeSec, err := strconv.ParseInt(endTimeQP, 10, 64)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while parsing time: ", err)
 		ctx.StatusCode(500)
 		return request.PromRequestMeta{}
 	}
-
+	endTime := time.Unix(endTimeSec, 0)
 	duration, err := time.ParseDuration(durationQP)
 	if err != nil {
 		zkLogger.Error(LogTag, "Error while parsing duration: ", err)
