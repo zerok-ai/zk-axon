@@ -21,6 +21,7 @@ type SpanTableDto struct {
 	TraceID             string         `json:"trace_id"`
 	ParentSpanID        string         `json:"parent_span_id"`
 	SpanID              string         `json:"span_id"`
+	SpanName            string         `json:"span_name"`
 	IsRoot              bool           `json:"is_root"`
 	Kind                string         `json:"kind"`
 	StartTime           time.Time      `json:"start_time"`

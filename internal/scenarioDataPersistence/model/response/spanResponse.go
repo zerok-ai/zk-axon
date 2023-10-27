@@ -17,6 +17,7 @@ type SpanDetails struct {
 	TraceID             string         `json:"trace_id"`
 	ParentSpanID        string         `json:"parent_span_id"`
 	SpanID              string         `json:"span_id"`
+	SpanName            string         `json:"span_name"`
 	IsRoot              bool           `json:"is_root"`
 	Kind                string         `json:"kind"`
 	StartTime           time.Time      `json:"start_time"`
@@ -50,6 +51,7 @@ func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetails
 			TraceID:             v.TraceID,
 			ParentSpanID:        v.ParentSpanID,
 			SpanID:              v.SpanID,
+			SpanName:            v.SpanName,
 			IsRoot:              v.IsRoot,
 			Kind:                v.Kind,
 			StartTime:           v.StartTime,
