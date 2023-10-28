@@ -2,8 +2,10 @@ package scenariodataresponse
 
 import (
 	"axon/internal/scenarioDataPersistence/model/dto"
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
+	zkcommon "github.com/zerok-ai/zk-utils-go/common"
 )
 
 type IncidentDetailsResponse struct {
@@ -21,26 +23,30 @@ type SpanDetails struct {
 	IsRoot              bool           `json:"is_root"`
 	Kind                string         `json:"kind"`
 	StartTime           time.Time      `json:"start_time"`
-	Latency             float32        `json:"latency"`
+	Latency             uint64         `json:"latency"`
 	Source              string         `json:"source"`
 	Destination         string         `json:"destination"`
 	WorkloadIDList      pq.StringArray `json:"workload_id_list"`
 	Protocol            string         `json:"protocol"`
 	IssueHashList       pq.StringArray `json:"issue_hash_list"`
-	RequestPayloadSize  int64          `json:"request_payload_size"`
-	ResponsePayloadSize int64          `json:"response_payload_size"`
+	RequestPayloadSize  uint64         `json:"request_payload_size"`
+	ResponsePayloadSize uint64         `json:"response_payload_size"`
 	Method              string         `json:"method"`
 	Route               string         `json:"route"`
 	Scheme              string         `json:"scheme"`
 	Path                string         `json:"path"`
 	Query               string         `json:"query"`
-	Status              *int           `json:"status"`
+	Status              *float64       `json:"status"`
 	Metadata            *string        `json:"metadata,omitempty"`
 	Username            string         `json:"username"`
 	SourceIP            string         `json:"source_ip"`
 	DestinationIP       string         `json:"destination_ip"`
 	ServiceName         string         `json:"service_name"`
 	Errors              string         `json:"errors"`
+
+	SpanAttributes     zkcommon.GenericMap `json:"span_attributes,omitempty"`
+	ResourceAttributes zkcommon.GenericMap `json:"resource_attributes,omitempty"`
+	ScopeAttributes    zkcommon.GenericMap `json:"scope_attributes,omitempty"`
 }
 
 func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetailsResponse {
@@ -69,12 +75,14 @@ func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetails
 			Path:                v.Path,
 			Query:               v.Query,
 			Status:              v.Status,
-			Metadata:            v.Metadata,
 			Username:            v.Username,
 			SourceIP:            v.SourceIP,
 			DestinationIP:       v.DestinationIP,
 			ServiceName:         v.ServiceName,
 			Errors:              v.Errors,
+			SpanAttributes:      v.SpanAttributes,
+			ResourceAttributes:  v.ResourceAttributes,
+			ScopeAttributes:     v.ScopeAttributes,
 		}
 
 		respMap[v.SpanID] = s

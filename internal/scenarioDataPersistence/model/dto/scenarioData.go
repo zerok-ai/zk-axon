@@ -1,8 +1,10 @@
 package dto
 
 import (
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
+	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 )
 
 type IncidentTableDto struct {
@@ -25,26 +27,29 @@ type SpanTableDto struct {
 	IsRoot              bool           `json:"is_root"`
 	Kind                string         `json:"kind"`
 	StartTime           time.Time      `json:"start_time"`
-	Latency             float32        `json:"latency"`
+	Latency             uint64         `json:"latency"`
 	Source              string         `json:"source"`
 	Destination         string         `json:"destination"`
 	WorkloadIDList      pq.StringArray `json:"workload_id_list"`
 	Protocol            string         `json:"protocol"`
 	IssueHashList       pq.StringArray `json:"issue_hash_list"`
-	RequestPayloadSize  int64          `json:"request_payload_size"`
-	ResponsePayloadSize int64          `json:"response_payload_size"`
+	RequestPayloadSize  uint64         `json:"request_payload_size"`
+	ResponsePayloadSize uint64         `json:"response_payload_size"`
 	Method              string         `json:"method"`
 	Route               string         `json:"route"`
 	Scheme              string         `json:"scheme"`
 	Path                string         `json:"path"`
 	Query               string         `json:"query"`
-	Status              *int           `json:"status"`
-	Metadata            *string        `json:"metadata"`
+	Status              *float64       `json:"status"`
 	Username            string         `json:"username"`
 	SourceIP            string         `json:"source_ip"`
 	DestinationIP       string         `json:"destination_ip"`
 	ServiceName         string         `json:"service_name"`
 	Errors              string         `json:"errors"`
+
+	SpanAttributes     zkCommon.GenericMap `json:"span_attributes"`
+	ResourceAttributes zkCommon.GenericMap `json:"resource_attributes"`
+	ScopeAttributes    zkCommon.GenericMap `json:"scope_attributes"`
 }
 
 type IssueDetailsDto struct {

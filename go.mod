@@ -2,7 +2,7 @@ module axon
 
 go 1.20
 
-require github.com/zerok-ai/zk-utils-go v0.5.5
+require github.com/zerok-ai/zk-utils-go v0.5.12
 
 require (
 	github.com/kataras/iris/v12 v12.2.0
