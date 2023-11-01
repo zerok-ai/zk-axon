@@ -12,9 +12,12 @@ http:
 postgres:
   host: localhost
   port: 5432
-  user: "postgres"
-  password: "eo1Mgtm6HI"
-  dbname: "pl"
+#  user: "postgres"
+#  password: "eo1Mgtm6HI"
+#  dbname: "pl"
+  user: "pl"
+  password: "pl"
+  dbname: "zk"
   max_connections: 5
   max_idle_connections: 5
   connection_max_lifetime_in_minutes: 10
@@ -28,4 +31,4 @@ redis:
     scenarios: 6
     integrations: 9
   readTimeout: 20
-  password: "RUZpgGGfsW"
+  password: "kj1p9v5tkB"
