@@ -47,6 +47,7 @@ type SpanDetails struct {
 	SpanAttributes     zkcommon.GenericMap `json:"span_attributes,omitempty"`
 	ResourceAttributes zkcommon.GenericMap `json:"resource_attributes,omitempty"`
 	ScopeAttributes    zkcommon.GenericMap `json:"scope_attributes,omitempty"`
+	HasRawData         *bool               `json:"has_raw_data,omitempty"`
 }
 
 func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetailsResponse {
@@ -83,6 +84,7 @@ func ConvertSpanToIncidentDetailsResponse(t []dto.SpanTableDto) *IncidentDetails
 			SpanAttributes:      v.SpanAttributes,
 			ResourceAttributes:  v.ResourceAttributes,
 			ScopeAttributes:     v.ScopeAttributes,
+			HasRawData:          v.HasRawData,
 		}
 
 		respMap[v.SpanID] = s

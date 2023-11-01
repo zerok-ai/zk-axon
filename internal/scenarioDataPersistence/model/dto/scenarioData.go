@@ -50,6 +50,7 @@ type SpanTableDto struct {
 	SpanAttributes     zkCommon.GenericMap `json:"span_attributes"`
 	ResourceAttributes zkCommon.GenericMap `json:"resource_attributes"`
 	ScopeAttributes    zkCommon.GenericMap `json:"scope_attributes"`
+	HasRawData         *bool               `json:"has_raw_data"`
 }
 
 type IssueDetailsDto struct {
