@@ -13,7 +13,7 @@ import (
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
-	"github.com/zerok-ai/zk-utils-go/zkerrors"
+	zkErrorsUtils "github.com/zerok-ai/zk-utils-go/zkerrors"
 	"strconv"
 )
 
@@ -42,7 +42,7 @@ func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) 
 	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.IncidentDetailListResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.IncidentDetailListResponse
 
 	if zkErr := validation.ValidateScenarioIdOffsetAndLimit(scenarioId, offset, limit); zkErr != nil {
@@ -51,6 +51,10 @@ func (t tracePersistenceHandler) GetIncidentListForScenarioId(ctx iris.Context) 
 		l, _ := strconv.Atoi(limit)
 		o, _ := strconv.Atoi(offset)
 		resp, zkErr = t.service.GetIncidentListServiceForScenarioId(scenarioId, issueHash, o, l)
+	}
+
+	if zkErr == nil && resp.TotalRecords == 0 {
+		zkErr = zkCommon.ToPtr(zkErrorsUtils.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorNotFound, nil))
 	}
 
 	if t.cfg.Http.Debug {
@@ -78,7 +82,7 @@ func (t tracePersistenceHandler) GetIssuesListWithDetailsHandler(ctx iris.Contex
 	st := ctx.URLParam(utils.StartTimeQueryParam)
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.IssueListWithDetailsResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.IssueListWithDetailsResponse
 
 	if zkErr := validation.GetIssuesListWithDetails(offset, limit, st); zkErr != nil {
@@ -106,7 +110,7 @@ func (t tracePersistenceHandler) GetScenarioDetailsHandler(ctx iris.Context) {
 	st := ctx.URLParam(utils.StartTimeQueryParam)
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.ScenarioDetailsResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.ScenarioDetailsResponse
 
 	if zkErr := validation.ValidateGetScenarioDetails(scenarioIds, st); zkErr != nil {
@@ -130,13 +134,17 @@ func (t tracePersistenceHandler) GetIssueDetailsHandler(ctx iris.Context) {
 	issueHash := ctx.Params().Get(utils.IssueHash)
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.IssueDetailsResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.IssueDetailsResponse
 
 	if zkErr := validation.ValidateIssueDetailsHandler(issueHash); zkErr != nil {
 		zkLogger.Error(LogTag, "Error while validating GetIssueDetailsHandler: ", zkErr)
 	} else {
 		resp, zkErr = t.service.GetIssueDetailsService(issueHash)
+	}
+
+	if zkErr == nil && resp.Issues.TotalCount == 0 {
+		zkErr = zkCommon.ToPtr(zkErrorsUtils.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorNotFound, nil))
 	}
 
 	if t.cfg.Http.Debug {
@@ -155,7 +163,7 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.IncidentIdListResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.IncidentIdListResponse
 
 	if zkErr := validation.ValidateIssueHashOffsetAndLimit(issueHash, offset, limit); zkErr != nil {
@@ -164,6 +172,10 @@ func (t tracePersistenceHandler) GetIncidentListHandler(ctx iris.Context) {
 		l, _ := strconv.Atoi(limit)
 		o, _ := strconv.Atoi(offset)
 		resp, zkErr = t.service.GetIncidentListService(issueHash, o, l)
+	}
+
+	if zkErr == nil && resp.TotalRecords == 0 {
+		zkErr = zkCommon.ToPtr(zkErrorsUtils.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorNotFound, nil))
 	}
 
 	if t.cfg.Http.Debug {
@@ -186,7 +198,7 @@ func (t tracePersistenceHandler) GetPodDetailsHandler(ctx iris.Context) {
 	offset := ctx.URLParamDefault(utils.OffsetQueryParam, "0")
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.IncidentDetailsResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.IncidentDetailsResponse
 
 	if zkErr := validation.ValidateGetIncidentDetailsApi(traceId, offset, limit); zkErr != nil {
@@ -195,6 +207,10 @@ func (t tracePersistenceHandler) GetPodDetailsHandler(ctx iris.Context) {
 		l, _ := strconv.Atoi(limit)
 		o, _ := strconv.Atoi(offset)
 		resp, zkErr = t.service.GetIncidentDetailsService(traceId, spanId, o, l)
+	}
+
+	if zkErr == nil && len(resp.Spans) == 0 {
+		zkErr = zkCommon.ToPtr(zkErrorsUtils.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorNotFound, nil))
 	}
 
 	// DONE
@@ -215,13 +231,17 @@ func (t tracePersistenceHandler) GetSpanRawDataHandler(ctx iris.Context) {
 	spanId := ctx.Params().Get(utils.SpanId)
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.SpanRawDataResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.SpanRawDataResponse
 
 	if zkErr := validation.ValidateGetSpanRawDataApi(traceId, spanId); zkErr != nil {
 		zkLogger.Error(LogTag, "Error while validating GetSpanRawDataHandler api", zkErr)
 	} else {
 		resp, zkErr = t.service.GetSpanRawDataService(traceId, spanId)
+	}
+
+	if zkErr == nil && len(resp.Spans) == 0 {
+		zkErr = zkCommon.ToPtr(zkErrorsUtils.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorNotFound, nil))
 	}
 
 	if t.cfg.Http.Debug {
@@ -251,7 +271,7 @@ func (t tracePersistenceHandler) GetErrorDataHandler(ctx iris.Context) {
 	}
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[traceResponse.ErrorDataResponse]
-	var zkErr *zkerrors.ZkError
+	var zkErr *zkErrorsUtils.ZkError
 	var resp traceResponse.ErrorDataResponse
 
 	if zkErr = validation.ValidateGetErrors(errorReq.ErrorIds); zkErr != nil {
@@ -264,12 +284,16 @@ func (t tracePersistenceHandler) GetErrorDataHandler(ctx iris.Context) {
 			}
 		}
 		if len(sanitizedErrorIds) == 0 {
-			zkErr = zkCommon.ToPtr(zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestErrorIdListIdEmpty, nil))
+			zkErr = zkCommon.ToPtr(zkErrorsUtils.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestErrorIdListIdEmpty, nil))
 			zkLogger.Error(LogTag, "Error while validating GetErrorHandler api", zkErr)
 			return
 		} else {
 			resp, zkErr = t.service.GetErrorDataService(errorReq.ErrorIds)
 		}
+	}
+
+	if zkErr == nil && len(resp.Errors) == 0 {
+		zkErr = zkCommon.ToPtr(zkErrorsUtils.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorNotFound, nil))
 	}
 
 	if t.cfg.Http.Debug {
