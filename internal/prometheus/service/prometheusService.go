@@ -389,9 +389,6 @@ func getPrometheusApiResponse(url, username, password, prometheusQueryPath strin
 		zkError := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestEmptyUrl, nil)
 		return nil, &zkError
 	}
-	if !strings.Contains(url, ":") {
-		url += ":9090"
-	}
 
 	return zkHttp.Create().
 		BasicAuth(username, password).

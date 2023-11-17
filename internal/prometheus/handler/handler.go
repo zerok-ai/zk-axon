@@ -8,7 +8,6 @@ import (
 	prometheusService "axon/internal/prometheus/service"
 	tracePersistenceService "axon/internal/scenarioDataPersistence/service"
 	"axon/utils"
-	"encoding/json"
 	"github.com/kataras/iris/v12"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
@@ -142,12 +141,6 @@ func (t prometheusHandler) TestUnsavedIntegrationConnectionStatus(ctx iris.Conte
 	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.TestConnectionResponse]
 	var zkErr *zkerrors.ZkError
 	resp, zkErr := t.prometheusSvc.TestUnsavedIntegrationConnection(url, userName, password)
-
-	x, _ := json.Marshal(resp)
-	y, _ := json.Marshal(zkErr)
-
-	zkLogger.Info(LogTag, "resp: ", string(x))
-	zkLogger.Info(LogTag, "zkErr: ", string(y))
 
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, *resp, zkErr)
