@@ -6,13 +6,20 @@ import (
 	"github.com/kataras/iris/v12/core/router"
 )
 
-func Initialize(app router.Party, tph handler.PrometheusHandler) {
+func Initialize(app router.Party, ph handler.PrometheusHandler) {
 	promClusterAPIs := app.Party("/c/axon")
 	{
-		promClusterAPIs.Get("/prom/pods-info/trace/{"+utils.TraceId+"}", tph.GetPodsInfoHandler)
-		promClusterAPIs.Get("/prom/container-info/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", tph.GetContainerInfoHandler)
-		promClusterAPIs.Get("/prom/container-metrics/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", tph.GetContainerMetricsHandler)
+		promClusterAPIs.Get("/prom/pods-info/trace/{"+utils.TraceId+"}", ph.GetPodsInfoHandler)
+		promClusterAPIs.Get("/prom/container-info/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", ph.GetContainerInfoHandler)
+		promClusterAPIs.Get("/prom/container-metrics/pod/{"+utils.Namespace+"}/{"+utils.PodId+"}", ph.GetContainerMetricsHandler)
 
-		promClusterAPIs.Post("/prom/{"+utils.IntegrationId+"}/query", tph.GetGenericQueryHandler)
+		promClusterAPIs.Post("/prom/{"+utils.IntegrationId+"}/query", ph.GetGenericQueryHandler)
+
+		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/status", ph.TestIntegrationConnectionStatus)
+		promClusterAPIs.Post("/prom/unsaved/status", ph.TestUnsavedIntegrationConnectionStatus)
+		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metricserver", ph.IsMetricServer)
+		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metrics", ph.GetMetrics)
+		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metric/{"+utils.MetricAttributeNamePathParam+"}/attributes", ph.GetMetricAttributes)
+		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/alerts", ph.GetAlerts)
 	}
 }

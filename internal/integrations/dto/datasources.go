@@ -27,6 +27,11 @@ type Authentication struct {
 	Username string `json:"username"`
 }
 
+type UnsavedIntegrationRequestBody struct {
+	Url string `json:"url"`
+	Authentication
+}
+
 // IntegrationType could contain values of type "PROMETHEUS", "DATADOG"
 type IntegrationType string
 

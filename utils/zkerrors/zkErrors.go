@@ -16,4 +16,5 @@ var (
 	ZkErrorBadRequestStartTimeNotNegative = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "Start time should be negative value"}
 	ZkErrorBadRequestSpanIdEmpty          = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "SpanId cannot be empty"}
 	ZkErrorNotFound                       = zkErrors.ZkErrorType{Status: iris.StatusNotFound, Type: "NOT_FOUND", Message: "Not found"}
+	ZkErrorBadRequestEmptyUrl             = zkErrors.ZkErrorType{Status: iris.StatusBadRequest, Type: "BAD_REQUEST", Message: "URL empty"}
 )

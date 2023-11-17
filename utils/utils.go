@@ -11,10 +11,12 @@ import (
 
 const (
 	// Path Params
-	IssueHash  = "issueHash"
-	IncidentId = "incidentId"
-	SpanId     = "spanId"
-	ScenarioId = "scenarioId"
+	IssueHash                    = "issueHash"
+	IncidentId                   = "incidentId"
+	SpanId                       = "spanId"
+	ScenarioId                   = "scenarioId"
+	IntegrationIdxPathParam      = "integrationId"
+	MetricAttributeNamePathParam = "metric"
 
 	Namespace     = "namespace"
 	TraceId       = "traceId"

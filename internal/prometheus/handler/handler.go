@@ -2,14 +2,17 @@ package handler
 
 import (
 	"axon/internal/config"
+	"axon/internal/integrations/dto"
 	"axon/internal/prometheus/model/request"
 	promResponse "axon/internal/prometheus/model/response"
 	prometheusService "axon/internal/prometheus/service"
 	tracePersistenceService "axon/internal/scenarioDataPersistence/service"
 	"axon/utils"
 	"github.com/kataras/iris/v12"
+	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
+	"github.com/zerok-ai/zk-utils-go/zkerrors"
 	"time"
 )
 
@@ -18,6 +21,12 @@ type PrometheusHandler interface {
 	GetContainerInfoHandler(ctx iris.Context)
 	GetContainerMetricsHandler(ctx iris.Context)
 	GetGenericQueryHandler(ctx iris.Context)
+	TestIntegrationConnectionStatus(ctx iris.Context)
+	TestUnsavedIntegrationConnectionStatus(ctx iris.Context)
+	IsMetricServer(ctx iris.Context)
+	GetMetrics(ctx iris.Context)
+	GetMetricAttributes(ctx iris.Context)
+	GetAlerts(ctx iris.Context)
 }
 
 var LogTag = "prometheus_handler"
@@ -86,4 +95,155 @@ func (t prometheusHandler) GetContainerMetricsHandler(ctx iris.Context) {
 	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.ContainerMetricsResponse]
 	resp, zkErr := t.prometheusSvc.GetContainerMetricService(podInfoReq)
 	sendResponse[promResponse.ContainerMetricsResponse](ctx, resp, zkHttpResponse, zkErr, t.cfg.Http.Debug)
+}
+
+func (t prometheusHandler) TestIntegrationConnectionStatus(ctx iris.Context) {
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.TestConnectionResponse]
+	var zkErr *zkerrors.ZkError
+	resp, zkErr := t.prometheusSvc.TestIntegrationConnection(integrationId)
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, *resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+}
+
+func (t prometheusHandler) TestUnsavedIntegrationConnectionStatus(ctx iris.Context) {
+	var req dto.UnsavedIntegrationRequestBody
+	readError := ctx.ReadJSON(&req)
+	if readError != nil {
+		zkLogger.Error(LogTag, "Error while reading request body: ", readError)
+		ctx.StatusCode(500)
+		return
+	}
+
+	url := req.Url
+	userName := req.Username
+	password := req.Password
+
+	if zkCommon.IsEmpty(url) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("Url is required")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.TestConnectionResponse]
+	var zkErr *zkerrors.ZkError
+	resp, zkErr := t.prometheusSvc.TestUnsavedIntegrationConnection(url, userName, password)
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, *resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+
+}
+
+func (t prometheusHandler) IsMetricServer(ctx iris.Context) {
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IsIntegrationMetricServerResponse]
+	var zkErr *zkerrors.ZkError
+	resp, zkErr := t.prometheusSvc.IsIntegrationMetricServer(integrationId)
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+}
+
+// TODO: WIP
+func (t prometheusHandler) GetMetricAttributes(ctx iris.Context) {
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+	metricName := ctx.Params().Get(utils.MetricAttributeNamePathParam)
+	if zkCommon.IsEmpty(metricName) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("MetricName is required")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IsIntegrationMetricServerResponse]
+	var zkErr *zkerrors.ZkError
+	resp, zkErr := t.prometheusSvc.IsIntegrationMetricServer(integrationId)
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+}
+
+func (t prometheusHandler) GetMetrics(ctx iris.Context) {
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IntegrationMetricsListResponse]
+	var zkErr *zkerrors.ZkError
+	resp, zkErr := t.prometheusSvc.MetricsList(integrationId)
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IntegrationMetricsListResponse](200, resp, resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IntegrationMetricsListResponse](200, resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+}
+
+func (t prometheusHandler) GetAlerts(ctx iris.Context) {
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IntegrationAlertsListResponse]
+	var zkErr *zkerrors.ZkError
+	resp, zkErr := t.prometheusSvc.AlertsList(integrationId)
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IntegrationAlertsListResponse](200, resp, resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IntegrationAlertsListResponse](200, resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
 }
