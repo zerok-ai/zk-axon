@@ -389,9 +389,6 @@ func getPrometheusApiResponse(url, username, password, prometheusQueryPath strin
 		zkError := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestEmptyUrl, nil)
 		return nil, &zkError
 	}
-
-	url = "http://localhost:9090"
-
 	if !strings.Contains(url, ":") {
 		url += ":9090"
 	}
