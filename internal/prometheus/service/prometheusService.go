@@ -390,6 +390,8 @@ func getPrometheusApiResponse(url, username, password, prometheusQueryPath strin
 		return nil, &zkError
 	}
 
+	zkLogger.Info(LogTag, "url: ", url)
+
 	return zkHttp.Create().
 		BasicAuth(username, password).
 		Get(url + prometheusQueryPath)
