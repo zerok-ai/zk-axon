@@ -11,13 +11,13 @@ type IncidentDetailListResponse struct {
 }
 
 type IncidentDetail struct {
-	IncidentId             string    `json:"incident_id"`
-	EntryService           string    `json:"entry_service"`
-	EndPoint               string    `json:"entry_path"`
-	RootSpanTime           time.Time `json:"root_span_time"`
-	LatencyNs              *float32  `json:"latency_ns"`
-	IncidentCollectionTime time.Time `json:"incident_collection_time"`
-	Protocol               string    `json:"protocol"`
+	IncidentId           string    `json:"incident_id"`
+	EntryService         string    `json:"entry_service"`
+	EndPoint             string    `json:"entry_path"`
+	RootSpanTime         time.Time `json:"root_span_time"`
+	LatencyNs            *float32  `json:"latency_ns"`
+	IncidentRootSpanTime time.Time `json:"incident_root_span_time"`
+	Protocol             string    `json:"protocol"`
 }
 
 func ConvertIncidentTableDtoToIncidentDetailListResponse(t []dto.IncidentTableDto) *IncidentDetailListResponse {
@@ -35,12 +35,12 @@ func ConvertIncidentTableDtoToIncidentDetailListResponse(t []dto.IncidentTableDt
 
 func getIncidentDetail(t dto.IncidentTableDto) IncidentDetail {
 	return IncidentDetail{
-		IncidentId:             t.TraceId,
-		EntryService:           t.EntryService,
-		EndPoint:               t.EndPoint,
-		RootSpanTime:           t.RootSpanTime,
-		LatencyNs:              t.LatencyNs,
-		IncidentCollectionTime: t.IncidentCollectionTime,
-		Protocol:               t.Protocol,
+		IncidentId:           t.TraceId,
+		EntryService:         t.EntryService,
+		EndPoint:             t.EndPoint,
+		RootSpanTime:         t.RootSpanTime,
+		LatencyNs:            t.LatencyNs,
+		IncidentRootSpanTime: t.IncidentRootSpanTime,
+		Protocol:             t.Protocol,
 	}
 }
