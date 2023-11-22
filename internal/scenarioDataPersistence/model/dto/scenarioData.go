@@ -8,15 +8,15 @@ import (
 )
 
 type IncidentTableDto struct {
-	TotalRows              int       `json:"total_rows"`
-	TraceId                string    `json:"trace_id"`
-	IssueHash              string    `json:"issue_hash"`
-	IncidentCollectionTime time.Time `json:"incident_collection_time"`
-	EntryService           string    `json:"entry_service"`
-	EndPoint               string    `json:"end_point"`
-	Protocol               string    `json:"protocol"`
-	RootSpanTime           time.Time `json:"root_span_time"`
-	LatencyNs              *float32  `json:"latency_ns"`
+	TotalRows            int       `json:"total_rows"`
+	TraceId              string    `json:"trace_id"`
+	IssueHash            string    `json:"issue_hash"`
+	IncidentRootSpanTime time.Time `json:"incident_root_span_time"`
+	EntryService         string    `json:"entry_service"`
+	EndPoint             string    `json:"end_point"`
+	Protocol             string    `json:"protocol"`
+	RootSpanTime         time.Time `json:"root_span_time"`
+	LatencyNs            *float32  `json:"latency_ns"`
 }
 
 type SpanTableDto struct {
