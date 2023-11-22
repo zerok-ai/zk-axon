@@ -9,6 +9,7 @@ import (
 	zkUtils "axon/utils"
 	zkErrorsAxon "axon/utils/zkerrors"
 	"encoding/json"
+	"fmt"
 	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/common/model"
 	"github.com/zerok-ai/zk-utils-go/common"
@@ -17,7 +18,6 @@ import (
 	"github.com/zerok-ai/zk-utils-go/zkerrors"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -31,6 +31,7 @@ type PrometheusService interface {
 	TestIntegrationConnection(integrationId string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	IsIntegrationMetricServer(integrationId string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError)
+	GetMetricAttributes(integrationId string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
 	MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError)
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
 
@@ -198,14 +199,15 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 
 	httpResp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/query?query=up")
 	if zkErr != nil {
-		return resp, zkErr
+		zkErrMetadata := zkErr.Metadata.(*zkerrors.ZkError)
+		resp.Message = zkErrMetadata.Metadata.(string)
+		return resp, nil
 	}
 
 	if httpResp.StatusCode != 200 {
 		zkLogger.Info(LogTag, "Status code not 200")
 		resp.Status = "error"
 		resp.Message = httpResp.Status
-		resp.ErrorType = strconv.Itoa(httpResp.StatusCode)
 		return resp, nil
 	}
 
@@ -227,13 +229,11 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 		return resp, nil
 	} else if apiResponse.Status == "error" {
 		resp.Message = apiResponse.Error
-		resp.ErrorType = apiResponse.ErrorType
 		return resp, nil
 	}
 
-	resp.Message = apiResponse.Error
-	resp.Message = apiResponse.ErrorType
-	return resp, nil
+	zkError := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, nil)
+	return resp, &zkError
 }
 
 func (s prometheusService) TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
@@ -244,6 +244,7 @@ func (s prometheusService) IsIntegrationMetricServer(integrationId string) (prom
 	var response promResponse.IsIntegrationMetricServerResponse
 	integration, zkError := getIntegrationDetails(s, integrationId)
 	if zkError != nil {
+		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
 		return response, zkError
 	}
 
@@ -254,8 +255,10 @@ func (s prometheusService) IsIntegrationMetricServer(integrationId string) (prom
 	}
 
 	if resp.StatusCode != 200 {
-		zkLogger.Error(LogTag, "Status code not 200", integrationId)
-		response.MetricServer = false
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
 		return response, nil
 	}
 
@@ -268,10 +271,51 @@ func (s prometheusService) IsIntegrationMetricServer(integrationId string) (prom
 
 	for _, label := range labelResponse.Data {
 		if strings.HasPrefix(label, "kubelet_") {
-			response.MetricServer = true
+			response.MetricServer = common.ToPtr(true)
 			return response, nil
 		}
 	}
+
+	return response, nil
+}
+
+func (s prometheusService) GetMetricAttributes(integrationId string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError) {
+	var response promResponse.MetricAttributesListResponse
+	integration, zkError := getIntegrationDetails(s, integrationId)
+	if zkError != nil {
+		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
+		return response, zkError
+	}
+
+	username, password := getUsernamePassword(*integration)
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, fmt.Sprintf("api/v1/metadata?metric=%s", integrationId))
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	if resp.StatusCode != 200 {
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
+		return response, nil
+	}
+
+	respBody, zkErr := getRequestBody(resp)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	attributesResponse, zkErr := readResponseBody[promResponse.QueryResult](respBody)
+	fmt.Println(attributesResponse)
+	//var resultMap map[string]interface{}
+	//err := json.Unmarshal([]byte(attributesResponse.Data.Result), &resultMap)
+	//for _, label := range attributesResponse.Data.Result {
+	//	if strings.HasPrefix(label, "kubelet_") {
+	//		response.Attributes = common.ToPtr(true)
+	//		return response, nil
+	//	}
+	//}
 
 	return response, nil
 }
@@ -286,11 +330,14 @@ func (s prometheusService) MetricsList(integrationId string) (promResponse.Integ
 	username, password := getUsernamePassword(*integration)
 	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values")
 	if zkErr != nil {
-		return response, zkErr
+		return response, nil
 	}
 
 	if resp.StatusCode != 200 {
-		zkLogger.Error(LogTag, "Status code not 200", integrationId)
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
 		response.Metrics = nil
 		return response, nil
 	}
@@ -317,6 +364,15 @@ func (s prometheusService) AlertsList(integrationId string) (promResponse.Integr
 	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/alerts")
 	if zkErr != nil {
 		return response, zkErr
+	}
+
+	if resp.StatusCode != 200 {
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
+		response.Alerts = nil
+		return response, nil
 	}
 
 	respBody, zkErr := getRequestBody(resp)

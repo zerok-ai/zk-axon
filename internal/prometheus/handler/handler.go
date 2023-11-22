@@ -190,14 +190,14 @@ func (t prometheusHandler) GetMetricAttributes(ctx iris.Context) {
 		return
 	}
 
-	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IsIntegrationMetricServerResponse]
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.MetricAttributesListResponse]
 	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.IsIntegrationMetricServer(integrationId)
+	resp, zkErr := t.prometheusSvc.GetMetricAttributes(integrationId)
 
 	if t.cfg.Http.Debug {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, resp, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.MetricAttributesListResponse](200, resp, resp, zkErr)
 	} else {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, nil, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.MetricAttributesListResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)

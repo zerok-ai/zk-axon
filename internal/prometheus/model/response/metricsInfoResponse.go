@@ -1,18 +1,37 @@
 package response
 
 type IsIntegrationMetricServerResponse struct {
-	MetricServer bool `json:"metric_server"`
+	MetricServer *bool `json:"metric_server,omitempty"`
+	ErrorField
+}
+
+type MetricAttributesListResponse struct {
+	Attributes []string `json:"attributes"`
+	ErrorField
 }
 
 type IntegrationMetricsListResponse struct {
 	Metrics []string `json:"metrics"`
+	ErrorField
+}
+
+type ErrorField struct {
+	StatusCode *int    `json:"status_code,omitempty"`
+	Status     *string `json:"status,omitempty"`
+	Error      *bool   `json:"error,omitempty"`
 }
 
 type IntegrationAlertsListResponse struct {
 	Alerts []string `json:"alerts"`
+	ErrorField
 }
 
 type LabelNameResponse struct {
+	Status string   `json:"status"`
+	Data   []string `json:"data"`
+}
+
+type MetricAttributesResponse struct {
 	Status string   `json:"status"`
 	Data   []string `json:"data"`
 }
@@ -25,9 +44,8 @@ type AlertsResponse struct {
 }
 
 type TestConnectionResponse struct {
-	Status    string `json:"status"`
-	Message   string `json:"message,omitempty"`
-	ErrorType string `json:"errorType,omitempty"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
 }
 
 type QueryResult struct {
