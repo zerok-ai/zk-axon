@@ -39,6 +39,9 @@ const (
 
 	LogTag = "utils"
 
+	StatusError   = "error"
+	StatusSuccess = "success"
+
 	ConnectionSuccessful = "Connection Successful"
 	ConnectionFailed     = "Connection Failed"
 )
