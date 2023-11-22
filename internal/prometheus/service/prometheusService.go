@@ -9,6 +9,7 @@ import (
 	zkUtils "axon/utils"
 	zkErrorsAxon "axon/utils/zkerrors"
 	"encoding/json"
+	"fmt"
 	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/common/model"
 	"github.com/zerok-ai/zk-utils-go/common"
@@ -27,9 +28,10 @@ type PrometheusService interface {
 	GetContainerInfoService(podInfoReq request.PromRequestMeta) (promResponse.ContainerInfoResponse, *zkerrors.ZkError)
 	GetContainerMetricService(podInfoReq request.PromRequestMeta) (promResponse.ContainerMetricsResponse, *zkerrors.ZkError)
 	GetGenericQueryService(genericQueryReq request.GenericPromRequest) (promResponse.GenericQueryResponse, *zkerrors.ZkError)
-	TestIntegrationConnection(integrationId string) (*promResponse.TestConnectionResponse, *zkerrors.ZkError)
-	TestUnsavedIntegrationConnection(url, userName, password string) (*promResponse.TestConnectionResponse, *zkerrors.ZkError)
+	TestIntegrationConnection(integrationId string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
+	TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	IsIntegrationMetricServer(integrationId string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError)
+	GetMetricAttributes(integrationId string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
 	MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError)
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
 
@@ -177,128 +179,143 @@ func (s prometheusService) GetContainerMetricService(podInfoReq request.PromRequ
 	return response, nil
 }
 
-func (s prometheusService) TestIntegrationConnection(integrationId string) (*promResponse.TestConnectionResponse, *zkerrors.ZkError) {
-	var resp promResponse.TestConnectionResponse
-	resp.Status = "error"
-
+func (s prometheusService) TestIntegrationConnection(integrationId string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
 	integration, zkError := getIntegrationDetails(s, integrationId)
 	if zkError != nil {
+		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
+		var resp promResponse.TestConnectionResponse
+		resp.Status = zkUtils.ConnectionFailed
 		resp.Message = "Integration Not found"
-		return &resp, zkError
+		return resp, zkError
 	}
 
 	username, password := getUsernamePassword(*integration)
-	httpResp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/query?query=up")
-	if zkErr != nil {
-		zkLogger.Error(LogTag, "Error while getting the integration status: ", zkErr)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, zkErr)
-		resp.Message = "internal server error"
-		return &resp, &newZkErr
-	}
-
-	respBody, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while reading the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
-		resp.Message = "internal server error"
-		return &resp, &newZkErr
-	}
-
-	var apiResponse promResponse.QueryResult
-	err = json.Unmarshal(respBody, &apiResponse)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while unmarshalling the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
-		resp.Message = "internal server error"
-		return &resp, &newZkErr
-	}
-
-	if apiResponse.Status == "success" {
-		resp.Status = "success"
-		resp.Message = "Connection successful"
-		return &resp, nil
-	} else if apiResponse.Status == "error" {
-		resp.Message = apiResponse.Error
-		resp.ErrorType = apiResponse.ErrorType
-		return &resp, nil
-	}
-
-	resp.Message = apiResponse.Error
-	resp.Message = apiResponse.ErrorType
-	return &resp, nil
+	return getConnectionStatus(integration.Url, username, password)
 }
 
-func (s prometheusService) TestUnsavedIntegrationConnection(url, userName, password string) (*promResponse.TestConnectionResponse, *zkerrors.ZkError) {
+func getConnectionStatus(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
 	var resp promResponse.TestConnectionResponse
-	resp.Status = "error"
+	resp.Status = zkUtils.ConnectionFailed
 
-	httpResp, zkErr := getPrometheusApiResponse(url, userName, password, "/api/v1/query?query=up")
+	httpResp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/query?query=up")
 	if zkErr != nil {
-		zkLogger.Error(LogTag, "Error while getting the integration status: ", zkErr)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, zkErr)
-		resp.Message = "internal server error"
-		return &resp, &newZkErr
+		zkErrMetadata := zkErr.Metadata.(*zkerrors.ZkError)
+		resp.Message = zkErrMetadata.Metadata.(string)
+		return resp, nil
 	}
 
-	respBody, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while reading the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
-		resp.Message = "internal server error"
-		return &resp, &newZkErr
+	if httpResp.StatusCode != 200 {
+		zkLogger.Info(LogTag, "Status code not 200")
+		resp.Status = zkUtils.ConnectionFailed
+		resp.Message = httpResp.Status
+		return resp, nil
 	}
 
-	var apiResponse promResponse.QueryResult
-	err = json.Unmarshal(respBody, &apiResponse)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while unmarshalling the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
+	respBody, zkErr := getRequestBody(httpResp)
+	if zkErr != nil {
 		resp.Message = "internal server error"
-		return &resp, &newZkErr
+		return resp, zkErr
 	}
 
-	if apiResponse.Status == "success" {
-		resp.Status = "success"
+	apiResponse, zkErr := readResponseBody[promResponse.QueryResult](respBody)
+	if zkErr != nil {
+		resp.Message = "internal server error"
+		return resp, zkErr
+	}
+
+	if apiResponse.Status == zkUtils.ConnectionSuccessful {
+		resp.Status = zkUtils.ConnectionSuccessful
 		resp.Message = "Connection successful"
-		return &resp, nil
-	} else if apiResponse.Status == "error" {
+		return resp, nil
+	} else if apiResponse.Status == zkUtils.ConnectionFailed {
 		resp.Message = apiResponse.Error
-		resp.ErrorType = apiResponse.ErrorType
-		return &resp, nil
+		return resp, nil
 	}
 
-	resp.Message = apiResponse.Error
-	resp.Message = apiResponse.ErrorType
-	return &resp, nil
+	zkError := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, nil)
+	return resp, &zkError
+}
 
+func (s prometheusService) TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
+	return getConnectionStatus(url, username, password)
 }
 
 func (s prometheusService) IsIntegrationMetricServer(integrationId string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError) {
 	var response promResponse.IsIntegrationMetricServerResponse
 	integration, zkError := getIntegrationDetails(s, integrationId)
 	if zkError != nil {
+		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
 		return response, zkError
 	}
 
-	resp, zkErr := getPrometheusResponse(*integration, "/api/v1/label/__name__/values")
+	username, password := getUsernamePassword(*integration)
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values")
 	if zkErr != nil {
 		return response, zkErr
 	}
 
-	var labelResponse promResponse.LabelNameResponse
-	err := json.Unmarshal(resp, &labelResponse)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while unmarshalling the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
-		return response, &newZkErr
+	if resp.StatusCode != 200 {
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
+		return response, nil
 	}
+
+	respBody, zkErr := getRequestBody(resp)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	labelResponse, zkErr := readResponseBody[promResponse.LabelNameResponse](respBody)
 
 	for _, label := range labelResponse.Data {
 		if strings.HasPrefix(label, "kubelet_") {
-			response.MetricServer = true
+			response.MetricServer = common.ToPtr(true)
 			return response, nil
 		}
 	}
+
+	return response, nil
+}
+
+func (s prometheusService) GetMetricAttributes(integrationId string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError) {
+	var response promResponse.MetricAttributesListResponse
+	integration, zkError := getIntegrationDetails(s, integrationId)
+	if zkError != nil {
+		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
+		return response, zkError
+	}
+
+	username, password := getUsernamePassword(*integration)
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, fmt.Sprintf("api/v1/metadata?metric=%s", integrationId))
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	if resp.StatusCode != 200 {
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
+		return response, nil
+	}
+
+	respBody, zkErr := getRequestBody(resp)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	attributesResponse, zkErr := readResponseBody[promResponse.QueryResult](respBody)
+	fmt.Println(attributesResponse)
+	//var resultMap map[string]interface{}
+	//err := json.Unmarshal([]byte(attributesResponse.Data.Result), &resultMap)
+	//for _, label := range attributesResponse.Data.Result {
+	//	if strings.HasPrefix(label, "kubelet_") {
+	//		response.Attributes = common.ToPtr(true)
+	//		return response, nil
+	//	}
+	//}
 
 	return response, nil
 }
@@ -310,18 +327,27 @@ func (s prometheusService) MetricsList(integrationId string) (promResponse.Integ
 		return response, zkError
 	}
 
-	resp, zkErr := getPrometheusResponse(*integration, "/api/v1/label/__name__/values")
+	username, password := getUsernamePassword(*integration)
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values")
+	if zkErr != nil {
+		return response, nil
+	}
+
+	if resp.StatusCode != 200 {
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
+		response.Metrics = nil
+		return response, nil
+	}
+
+	respBody, zkErr := getRequestBody(resp)
 	if zkErr != nil {
 		return response, zkErr
 	}
 
-	var metricsListResponse promResponse.LabelNameResponse
-	err := json.Unmarshal(resp, &metricsListResponse)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while unmarshalling the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
-		return response, &newZkErr
-	}
+	metricsListResponse, zkErr := readResponseBody[promResponse.LabelNameResponse](respBody)
 
 	response.Metrics = metricsListResponse.Data
 	return response, nil
@@ -334,19 +360,32 @@ func (s prometheusService) AlertsList(integrationId string) (promResponse.Integr
 		return response, zkError
 	}
 
-	resp, zkErr := getPrometheusResponse(*integration, "/api/v1/alerts")
+	username, password := getUsernamePassword(*integration)
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/alerts")
 	if zkErr != nil {
 		return response, zkErr
 	}
 
-	var alertsResponse promResponse.AlertsResponse
-	err := json.Unmarshal(resp, &alertsResponse)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while unmarshalling the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
-		return response, &newZkErr
+	if resp.StatusCode != 200 {
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
+		response.StatusCode = common.ToPtr(resp.StatusCode)
+		response.Status = common.ToPtr(resp.Status)
+		response.Error = common.ToPtr(true)
+		response.Alerts = nil
+		return response, nil
 	}
 
+	respBody, zkErr := getRequestBody(resp)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	alertsResponse, zkErr := readResponseBody[promResponse.LabelNameResponse](respBody)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	response.Alerts = alertsResponse.Data
 	return response, nil
 }
 
@@ -364,37 +403,46 @@ func getUsernamePassword(integration dto.Integration) (string, string) {
 	return integration.Authentication.Username, integration.Authentication.Password
 }
 
-func getPrometheusResponse(integration dto.Integration, prometheusQueryPath string) ([]byte, *zkerrors.ZkError) {
-	username, password := getUsernamePassword(integration)
-	httpResp, zkErr := getPrometheusApiResponse(integration.Url, username, password, prometheusQueryPath)
-	if zkErr != nil {
-		zkLogger.Error(LogTag, "Error while getting the metrics status: ", zkErr)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, zkErr)
-		return nil, &newZkErr
-	}
-
-	resp, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		zkLogger.Error(LogTag, "Error while reading the response body: ", err)
-		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
-		return nil, &newZkErr
-	}
-
-	return resp, nil
-}
-
-func getPrometheusApiResponse(url, username, password, prometheusQueryPath string) (*http.Response, *zkerrors.ZkError) {
+func getPrometheusApiResponse(url, username, password string, prometheusQueryPath string) (*http.Response, *zkerrors.ZkError) {
 	if common.IsEmpty(url) {
 		zkLogger.Error(LogTag, "url is empty")
 		zkError := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestEmptyUrl, nil)
 		return nil, &zkError
 	}
 
-	zkLogger.Info(LogTag, "url: ", url)
-
-	return zkHttp.Create().
+	httpResp, zkErr := zkHttp.Create().
 		BasicAuth(username, password).
 		Get(url + prometheusQueryPath)
+
+	if zkErr != nil {
+		zkLogger.Error(LogTag, "Error while calling the api: ", url+prometheusQueryPath)
+		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, zkErr)
+		return nil, &newZkErr
+	}
+
+	return httpResp, nil
+}
+
+func getRequestBody(response *http.Response) ([]byte, *zkerrors.ZkError) {
+	respBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while reading the response body: ", err)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
+		return nil, &zkErr
+	}
+	return respBody, nil
+}
+
+func readResponseBody[T any](responseBodyBytes []byte) (T, *zkerrors.ZkError) {
+	var responseBody T
+	err := json.Unmarshal(responseBodyBytes, &responseBody)
+	if err != nil {
+		zkLogger.Error(LogTag, "Error while unmarshalling the response body: ", err)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, err)
+		return responseBody, &zkErr
+	}
+
+	return responseBody, nil
 }
 
 func extractMetricAttributes(dataVector model.Vector) promResponse.VectorList {

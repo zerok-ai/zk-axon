@@ -110,9 +110,9 @@ func (t prometheusHandler) TestIntegrationConnectionStatus(ctx iris.Context) {
 	resp, zkErr := t.prometheusSvc.TestIntegrationConnection(integrationId)
 
 	if t.cfg.Http.Debug {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, *resp, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, resp, resp, zkErr)
 	} else {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, nil, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)
@@ -129,7 +129,7 @@ func (t prometheusHandler) TestUnsavedIntegrationConnectionStatus(ctx iris.Conte
 	}
 
 	url := req.Url
-	userName := req.Username
+	username := req.Username
 	password := req.Password
 
 	if zkCommon.IsEmpty(url) {
@@ -140,12 +140,12 @@ func (t prometheusHandler) TestUnsavedIntegrationConnectionStatus(ctx iris.Conte
 
 	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.TestConnectionResponse]
 	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.TestUnsavedIntegrationConnection(url, userName, password)
+	resp, zkErr := t.prometheusSvc.TestUnsavedIntegrationConnection(url, username, password)
 
 	if t.cfg.Http.Debug {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, *resp, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, resp, resp, zkErr)
 	} else {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, *resp, nil, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.TestConnectionResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)
@@ -190,14 +190,14 @@ func (t prometheusHandler) GetMetricAttributes(ctx iris.Context) {
 		return
 	}
 
-	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IsIntegrationMetricServerResponse]
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.MetricAttributesListResponse]
 	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.IsIntegrationMetricServer(integrationId)
+	resp, zkErr := t.prometheusSvc.GetMetricAttributes(integrationId)
 
 	if t.cfg.Http.Debug {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, resp, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.MetricAttributesListResponse](200, resp, resp, zkErr)
 	} else {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, nil, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.MetricAttributesListResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)
