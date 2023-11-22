@@ -6,7 +6,7 @@ type IsIntegrationMetricServerResponse struct {
 }
 
 type MetricAttributesListResponse struct {
-	Attributes []string `json:"attributes"`
+	Attributes map[string]int `json:"attributes"`
 	ErrorField
 }
 
@@ -60,4 +60,9 @@ type QueryResult struct {
 type DataSection struct {
 	ResultType string      `json:"resultType"`
 	Result     interface{} `json:"result"`
+}
+
+type MetricAttributes struct {
+	Status string          `json:"status"`
+	Data   []AttributesMap `json:"data"`
 }

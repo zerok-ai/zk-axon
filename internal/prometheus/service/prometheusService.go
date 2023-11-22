@@ -9,7 +9,6 @@ import (
 	zkUtils "axon/utils"
 	zkErrorsAxon "axon/utils/zkerrors"
 	"encoding/json"
-	"fmt"
 	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/common/model"
 	"github.com/zerok-ai/zk-utils-go/common"
@@ -19,6 +18,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"zk-utils-go/ds"
 )
 
 var LogTag = "zk_prometheus_service"
@@ -31,7 +31,7 @@ type PrometheusService interface {
 	TestIntegrationConnection(integrationId string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	IsIntegrationMetricServer(integrationId string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError)
-	GetMetricAttributes(integrationId string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
+	GetMetricAttributes(integrationId string, metricName string, st string, et string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
 	MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError)
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
 
@@ -197,7 +197,11 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 	var resp promResponse.TestConnectionResponse
 	resp.Status = zkUtils.StatusError
 
-	httpResp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/query?query=up")
+	queryParam := map[string]string{
+		"query": "up",
+	}
+
+	httpResp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/query", queryParam)
 	if zkErr != nil {
 		zkErrMetadata := zkErr.Metadata.(*zkerrors.ZkError)
 		resp.Message = zkErrMetadata.Metadata.(string)
@@ -249,7 +253,7 @@ func (s prometheusService) IsIntegrationMetricServer(integrationId string) (prom
 	}
 
 	username, password := getUsernamePassword(*integration)
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values")
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values", nil)
 	if zkErr != nil {
 		return response, zkErr
 	}
@@ -279,7 +283,7 @@ func (s prometheusService) IsIntegrationMetricServer(integrationId string) (prom
 	return response, nil
 }
 
-func (s prometheusService) GetMetricAttributes(integrationId string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError) {
+func (s prometheusService) GetMetricAttributes(integrationId string, metricName string, st string, et string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError) {
 	var response promResponse.MetricAttributesListResponse
 	integration, zkError := getIntegrationDetails(s, integrationId)
 	if zkError != nil {
@@ -288,7 +292,13 @@ func (s prometheusService) GetMetricAttributes(integrationId string) (promRespon
 	}
 
 	username, password := getUsernamePassword(*integration)
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, fmt.Sprintf("api/v1/metadata?metric=%s", integrationId))
+	queryParam := map[string]string{
+		"start":   st,
+		"end":     et,
+		"match[]": metricName,
+	}
+
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/series", queryParam)
 	if zkErr != nil {
 		return response, zkErr
 	}
@@ -306,18 +316,27 @@ func (s prometheusService) GetMetricAttributes(integrationId string) (promRespon
 		return response, zkErr
 	}
 
-	attributesResponse, zkErr := readResponseBody[promResponse.QueryResult](respBody)
-	fmt.Println(attributesResponse)
-	//var resultMap map[string]interface{}
-	//err := json.Unmarshal([]byte(attributesResponse.Data.Result), &resultMap)
-	//for _, label := range attributesResponse.Data.Result {
-	//	if strings.HasPrefix(label, "kubelet_") {
-	//		response.Attributes = common.ToPtr(true)
-	//		return response, nil
-	//	}
-	//}
+	attributesResponse, zkErr := readResponseBody[promResponse.MetricAttributes](respBody)
+	uniqueValueListPerAttribute := getUniqueValuesOfAttributes(attributesResponse.Data)
+	response.Attributes = make(map[string]int)
+	for key, value := range uniqueValueListPerAttribute {
+		response.Attributes[key] = len(value)
+	}
 
 	return response, nil
+}
+
+func getUniqueValuesOfAttributes(attributes []promResponse.AttributesMap) map[string]ds.Set[string] {
+	uniqueValues := make(map[string]ds.Set[string])
+	for _, attribute := range attributes {
+		for key, value := range attribute {
+			if uniqueValues[key] == nil {
+				uniqueValues[key] = ds.Set[string]{}
+			}
+			uniqueValues[key].Add(value)
+		}
+	}
+	return uniqueValues
 }
 
 func (s prometheusService) MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError) {
@@ -328,7 +347,7 @@ func (s prometheusService) MetricsList(integrationId string) (promResponse.Integ
 	}
 
 	username, password := getUsernamePassword(*integration)
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values")
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values", nil)
 	if zkErr != nil {
 		return response, nil
 	}
@@ -361,7 +380,7 @@ func (s prometheusService) AlertsList(integrationId string) (promResponse.Integr
 	}
 
 	username, password := getUsernamePassword(*integration)
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/alerts")
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/alerts", nil)
 	if zkErr != nil {
 		return response, zkErr
 	}
@@ -403,14 +422,21 @@ func getUsernamePassword(integration dto.Integration) (string, string) {
 	return integration.Authentication.Username, integration.Authentication.Password
 }
 
-func getPrometheusApiResponse(url, username, password string, prometheusQueryPath string) (*http.Response, *zkerrors.ZkError) {
+func getPrometheusApiResponse(url, username, password, prometheusQueryPath string, queryParams map[string]string) (*http.Response, *zkerrors.ZkError) {
 	if common.IsEmpty(url) {
 		zkLogger.Error(LogTag, "url is empty")
 		zkError := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestEmptyUrl, nil)
 		return nil, &zkError
 	}
 
-	httpResp, zkErr := zkHttp.Create().
+	req := zkHttp.Create()
+	if queryParams != nil {
+		for key, value := range queryParams {
+			req = req.QueryParam(key, value)
+		}
+	}
+
+	httpResp, zkErr := req.
 		BasicAuth(username, password).
 		Get(url + prometheusQueryPath)
 

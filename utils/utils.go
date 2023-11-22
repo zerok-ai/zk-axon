@@ -35,6 +35,7 @@ const (
 	LimitQueryParam          = "limit"
 	OffsetQueryParam         = "offset"
 	StartTimeQueryParam      = "st"
+	EndTimeQueryParam        = "et"
 	DurationQueryParam       = "duration"
 
 	LogTag = "utils"

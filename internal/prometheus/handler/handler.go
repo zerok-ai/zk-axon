@@ -13,6 +13,7 @@ import (
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
 	zkLogger "github.com/zerok-ai/zk-utils-go/logs"
 	"github.com/zerok-ai/zk-utils-go/zkerrors"
+	"strconv"
 	"time"
 )
 
@@ -175,7 +176,6 @@ func (t prometheusHandler) IsMetricServer(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
-// TODO: WIP
 func (t prometheusHandler) GetMetricAttributes(ctx iris.Context) {
 	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
 	if zkCommon.IsEmpty(integrationId) {
@@ -190,9 +190,18 @@ func (t prometheusHandler) GetMetricAttributes(ctx iris.Context) {
 		return
 	}
 
+	// if start and end time is not passed, we will take data from last 6 hrs
+	startTime := ctx.URLParam(utils.StartTimeQueryParam)
+	endTime := ctx.URLParam(utils.EndTimeQueryParam)
+	if zkCommon.IsEmpty(startTime) || zkCommon.IsEmpty(endTime) {
+		currentTime := time.Now()
+		startTime = strconv.FormatInt(currentTime.Unix(), 10)
+		endTime = strconv.FormatInt(currentTime.Add(-(6 * time.Hour)).Unix(), 10)
+	}
+
 	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.MetricAttributesListResponse]
 	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.GetMetricAttributes(integrationId)
+	resp, zkErr := t.prometheusSvc.GetMetricAttributes(integrationId, metricName, startTime, endTime)
 
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[promResponse.MetricAttributesListResponse](200, resp, resp, zkErr)
