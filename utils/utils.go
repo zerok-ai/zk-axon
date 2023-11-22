@@ -38,6 +38,9 @@ const (
 	DurationQueryParam       = "duration"
 
 	LogTag = "utils"
+
+	ConnectionSuccessful = "Connection Successful"
+	ConnectionFailed     = "Connection Failed"
 )
 
 func CalendarDaysBetween(start, end time.Time) int {

@@ -184,7 +184,7 @@ func (s prometheusService) TestIntegrationConnection(integrationId string) (prom
 	if zkError != nil {
 		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
 		var resp promResponse.TestConnectionResponse
-		resp.Status = "error"
+		resp.Status = zkUtils.ConnectionFailed
 		resp.Message = "Integration Not found"
 		return resp, zkError
 	}
@@ -195,7 +195,7 @@ func (s prometheusService) TestIntegrationConnection(integrationId string) (prom
 
 func getConnectionStatus(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
 	var resp promResponse.TestConnectionResponse
-	resp.Status = "error"
+	resp.Status = zkUtils.ConnectionFailed
 
 	httpResp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/query?query=up")
 	if zkErr != nil {
@@ -206,7 +206,7 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 
 	if httpResp.StatusCode != 200 {
 		zkLogger.Info(LogTag, "Status code not 200")
-		resp.Status = "error"
+		resp.Status = zkUtils.ConnectionFailed
 		resp.Message = httpResp.Status
 		return resp, nil
 	}
@@ -223,11 +223,11 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 		return resp, zkErr
 	}
 
-	if apiResponse.Status == "success" {
-		resp.Status = "success"
+	if apiResponse.Status == zkUtils.ConnectionSuccessful {
+		resp.Status = zkUtils.ConnectionSuccessful
 		resp.Message = "Connection successful"
 		return resp, nil
-	} else if apiResponse.Status == "error" {
+	} else if apiResponse.Status == zkUtils.ConnectionFailed {
 		resp.Message = apiResponse.Error
 		return resp, nil
 	}
