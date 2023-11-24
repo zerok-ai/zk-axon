@@ -17,7 +17,6 @@ func Initialize(app router.Party, ph handler.PrometheusHandler) {
 
 		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/status", ph.TestIntegrationConnectionStatus)
 		promClusterAPIs.Post("/prom/unsaved/status", ph.TestUnsavedIntegrationConnectionStatus)
-		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metricserver", ph.IsMetricServer)
 		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metrics", ph.GetMetrics)
 		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metric/{"+utils.MetricAttributeNamePathParam+"}/attributes", ph.GetMetricAttributes)
 		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/alerts", ph.GetAlerts)
