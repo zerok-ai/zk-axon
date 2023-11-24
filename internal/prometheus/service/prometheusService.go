@@ -199,7 +199,7 @@ func (s prometheusService) TestIntegrationConnection(integrationId string) (prom
 		return resp, zkError
 	}
 
-	resp.HasMetricServer = *metricServerResp.MetricServer
+	resp.HasMetricServer = metricServerResp.MetricServer
 	return resp, nil
 }
 
@@ -261,7 +261,7 @@ func (s prometheusService) TestUnsavedIntegrationConnection(url, username, passw
 		return resp, zkError
 	}
 
-	resp.HasMetricServer = *metricServerResp.MetricServer
+	resp.HasMetricServer = metricServerResp.MetricServer
 	return resp, nil
 }
 
