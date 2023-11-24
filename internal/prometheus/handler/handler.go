@@ -24,7 +24,6 @@ type PrometheusHandler interface {
 	GetGenericQueryHandler(ctx iris.Context)
 	TestIntegrationConnectionStatus(ctx iris.Context)
 	TestUnsavedIntegrationConnectionStatus(ctx iris.Context)
-	IsMetricServer(ctx iris.Context)
 	GetMetrics(ctx iris.Context)
 	GetMetricAttributes(ctx iris.Context)
 	GetAlerts(ctx iris.Context)
@@ -152,28 +151,6 @@ func (t prometheusHandler) TestUnsavedIntegrationConnectionStatus(ctx iris.Conte
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
 
-}
-
-func (t prometheusHandler) IsMetricServer(ctx iris.Context) {
-	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
-	if zkCommon.IsEmpty(integrationId) {
-		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.WriteString("IntegrationId is required")
-		return
-	}
-
-	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IsIntegrationMetricServerResponse]
-	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.IsIntegrationMetricServer(integrationId)
-
-	if t.cfg.Http.Debug {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, resp, zkErr)
-	} else {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IsIntegrationMetricServerResponse](200, resp, nil, zkErr)
-	}
-
-	ctx.StatusCode(zkHttpResponse.Status)
-	ctx.JSON(zkHttpResponse)
 }
 
 func (t prometheusHandler) GetMetricAttributes(ctx iris.Context) {

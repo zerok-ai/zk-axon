@@ -30,7 +30,6 @@ type PrometheusService interface {
 	GetGenericQueryService(genericQueryReq request.GenericPromRequest) (promResponse.GenericQueryResponse, *zkerrors.ZkError)
 	TestIntegrationConnection(integrationId string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
-	IsIntegrationMetricServer(integrationId string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError)
 	GetMetricAttributes(integrationId string, metricName string, st string, et string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
 	MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError)
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
@@ -184,18 +183,29 @@ func (s prometheusService) TestIntegrationConnection(integrationId string) (prom
 	if zkError != nil {
 		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
 		var resp promResponse.TestConnectionResponse
-		resp.Status = zkUtils.StatusError
-		resp.Message = "Integration Not found"
+		resp.ConnectionStatus = zkUtils.StatusError
+		resp.ConnectionMessage = "Integration Not found"
 		return resp, zkError
 	}
 
 	username, password := getUsernamePassword(*integration)
-	return getConnectionStatus(integration.Url, username, password)
+	resp, zkError := getConnectionStatus(integration.Url, username, password)
+	if zkError != nil {
+		return resp, zkError
+	}
+
+	metricServerResp, zkError := isIntegrationMetricServer(integrationId, integration.Url, username, password)
+	if zkError != nil {
+		return resp, zkError
+	}
+
+	resp.HasMetricServer = *metricServerResp.MetricServer
+	return resp, nil
 }
 
 func getConnectionStatus(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
 	var resp promResponse.TestConnectionResponse
-	resp.Status = zkUtils.StatusError
+	resp.ConnectionStatus = zkUtils.StatusError
 
 	queryParam := map[string]string{
 		"query": "up",
@@ -204,35 +214,35 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 	httpResp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/query", queryParam)
 	if zkErr != nil {
 		zkErrMetadata := zkErr.Metadata.(*zkerrors.ZkError)
-		resp.Message = zkErrMetadata.Metadata.(string)
+		resp.ConnectionMessage = zkErrMetadata.Metadata.(string)
 		return resp, nil
 	}
 
 	if httpResp.StatusCode != 200 {
 		zkLogger.Info(LogTag, "Status code not 200")
-		resp.Status = zkUtils.StatusError
-		resp.Message = httpResp.Status
+		resp.ConnectionStatus = zkUtils.StatusError
+		resp.ConnectionMessage = httpResp.Status
 		return resp, nil
 	}
 
 	respBody, zkErr := getRequestBody(httpResp)
 	if zkErr != nil {
-		resp.Message = "internal server error"
+		resp.ConnectionMessage = "internal server error"
 		return resp, zkErr
 	}
 
 	apiResponse, zkErr := readResponseBody[promResponse.QueryResult](respBody)
 	if zkErr != nil {
-		resp.Message = "internal server error"
+		resp.ConnectionMessage = "internal server error"
 		return resp, zkErr
 	}
 
 	if apiResponse.Status == zkUtils.StatusSuccess {
-		resp.Status = zkUtils.StatusSuccess
-		resp.Message = zkUtils.ConnectionSuccessful
+		resp.ConnectionStatus = zkUtils.StatusSuccess
+		resp.ConnectionMessage = zkUtils.ConnectionSuccessful
 		return resp, nil
 	} else if apiResponse.Status == zkUtils.StatusError {
-		resp.Message = apiResponse.Error
+		resp.ConnectionMessage = apiResponse.Error
 		return resp, nil
 	}
 
@@ -241,19 +251,23 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 }
 
 func (s prometheusService) TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
-	return getConnectionStatus(url, username, password)
-}
-
-func (s prometheusService) IsIntegrationMetricServer(integrationId string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError) {
-	var response promResponse.IsIntegrationMetricServerResponse
-	integration, zkError := getIntegrationDetails(s, integrationId)
+	resp, zkError := getConnectionStatus(url, username, password)
 	if zkError != nil {
-		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
-		return response, zkError
+		return resp, zkError
 	}
 
-	username, password := getUsernamePassword(*integration)
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values", nil)
+	metricServerResp, zkError := isIntegrationMetricServer("", url, username, password)
+	if zkError != nil {
+		return resp, zkError
+	}
+
+	resp.HasMetricServer = *metricServerResp.MetricServer
+	return resp, nil
+}
+
+func isIntegrationMetricServer(integrationId, url, username, password string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError) {
+	var response promResponse.IsIntegrationMetricServerResponse
+	resp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/label/__name__/values", nil)
 	if zkErr != nil {
 		return response, zkErr
 	}
