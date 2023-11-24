@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	logger "zk-utils-go/logs"
 )
 
 var LogTag = "zk_prometheus_service"
@@ -442,6 +443,8 @@ func getPrometheusApiResponse(url, username, password, prometheusQueryPath strin
 		zkError := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestEmptyUrl, nil)
 		return nil, &zkError
 	}
+
+	logger.Info(LogTag, "url: ", url+prometheusQueryPath)
 
 	req := zkHttp.Create()
 	if queryParams != nil {
