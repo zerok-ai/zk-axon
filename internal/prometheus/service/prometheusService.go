@@ -29,7 +29,7 @@ type PrometheusService interface {
 	GetContainerMetricService(podInfoReq request.PromRequestMeta) (promResponse.ContainerMetricsResponse, *zkerrors.ZkError)
 	GetGenericQueryService(genericQueryReq request.GenericPromRequest) (promResponse.GenericQueryResponse, *zkerrors.ZkError)
 	TestIntegrationConnection(integrationId string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
-	TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
+	TestUnsavedIntegrationConnection(url string, username, password *string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	GetMetricAttributes(integrationId string, metricName string, st string, et string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
 	MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError)
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
@@ -203,7 +203,7 @@ func (s prometheusService) TestIntegrationConnection(integrationId string) (prom
 	return resp, nil
 }
 
-func getConnectionStatus(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
+func getConnectionStatus(url string, username, password *string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
 	var resp promResponse.TestConnectionResponse
 	resp.ConnectionStatus = zkUtils.StatusError
 
@@ -250,7 +250,7 @@ func getConnectionStatus(url, username, password string) (promResponse.TestConne
 	return resp, &zkError
 }
 
-func (s prometheusService) TestUnsavedIntegrationConnection(url, username, password string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
+func (s prometheusService) TestUnsavedIntegrationConnection(url string, username, password *string) (promResponse.TestConnectionResponse, *zkerrors.ZkError) {
 	resp, zkError := getConnectionStatus(url, username, password)
 	if zkError != nil {
 		return resp, zkError
@@ -265,7 +265,7 @@ func (s prometheusService) TestUnsavedIntegrationConnection(url, username, passw
 	return resp, nil
 }
 
-func isIntegrationMetricServer(integrationId, url, username, password string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError) {
+func isIntegrationMetricServer(integrationId, url string, username, password *string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError) {
 	var response promResponse.IsIntegrationMetricServerResponse
 	resp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/label/__name__/values", nil)
 	if zkErr != nil {
@@ -432,11 +432,11 @@ func getIntegrationDetails(s prometheusService, integrationId string) (*dto.Inte
 	return integration, zkError
 }
 
-func getUsernamePassword(integration dto.Integration) (string, string) {
+func getUsernamePassword(integration dto.Integration) (*string, *string) {
 	return integration.Authentication.Username, integration.Authentication.Password
 }
 
-func getPrometheusApiResponse(url, username, password, prometheusQueryPath string, queryParams map[string]string) (*http.Response, *zkerrors.ZkError) {
+func getPrometheusApiResponse(url string, username *string, password *string, prometheusQueryPath string, queryParams map[string]string) (*http.Response, *zkerrors.ZkError) {
 	if common.IsEmpty(url) {
 		zkLogger.Error(LogTag, "url is empty")
 		zkError := zkerrors.ZkErrorBuilder{}.Build(zkErrorsAxon.ZkErrorBadRequestEmptyUrl, nil)
