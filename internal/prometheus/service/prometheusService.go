@@ -211,7 +211,7 @@ func getConnectionStatus(url string, username, password *string) (promResponse.T
 		"query": "up",
 	}
 
-	httpResp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/query", queryParam)
+	httpResp, zkErr := getPrometheusApiResponse(url, username, password, zkUtils.PrometheusQueryEndpoint, queryParam)
 	if zkErr != nil {
 		zkErrMetadata := zkErr.Metadata.(*zkerrors.ZkError)
 		resp.ConnectionMessage = zkErrMetadata.Metadata.(string)
@@ -267,7 +267,7 @@ func (s prometheusService) TestUnsavedIntegrationConnection(url string, username
 
 func isIntegrationMetricServer(integrationId, url string, username, password *string) (promResponse.IsIntegrationMetricServerResponse, *zkerrors.ZkError) {
 	var response promResponse.IsIntegrationMetricServerResponse
-	resp, zkErr := getPrometheusApiResponse(url, username, password, "/api/v1/label/__name__/values", nil)
+	resp, zkErr := getPrometheusApiResponse(url, username, password, zkUtils.PrometheusQueryLabelValuesEndpoint, nil)
 	if zkErr != nil {
 		return response, zkErr
 	}
@@ -312,7 +312,7 @@ func (s prometheusService) GetMetricAttributes(integrationId string, metricName 
 		"match[]": metricName,
 	}
 
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/series", queryParam)
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, zkUtils.PrometheusQuerySeriesEndpoint, queryParam)
 	if zkErr != nil {
 		return response, zkErr
 	}
@@ -361,7 +361,7 @@ func (s prometheusService) MetricsList(integrationId string) (promResponse.Integ
 	}
 
 	username, password := getUsernamePassword(*integration)
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/label/__name__/values", nil)
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, zkUtils.PrometheusQueryLabelValuesEndpoint, nil)
 	if zkErr != nil {
 		return response, nil
 	}
@@ -394,7 +394,13 @@ func (s prometheusService) AlertsList(integrationId string) (promResponse.Integr
 	}
 
 	username, password := getUsernamePassword(*integration)
-	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, "/api/v1/alerts", nil)
+	queryParam := map[string]string{
+		"alertname":  "!=",
+		"severity":   "critical",
+		"alertstate": "firing",
+	}
+
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, zkUtils.PrometheusQueryAlertsEndpoint, queryParam)
 	if zkErr != nil {
 		return response, zkErr
 	}

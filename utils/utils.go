@@ -45,6 +45,12 @@ const (
 
 	ConnectionSuccessful = "Connection Successful"
 	ConnectionFailed     = "Connection Failed"
+
+	// Prometheus Query Endpoints
+	PrometheusQueryEndpoint            = "/api/v1/query"
+	PrometheusQuerySeriesEndpoint      = "/api/v1/series"
+	PrometheusQueryLabelValuesEndpoint = "/api/v1/label/__name__/values"
+	PrometheusQueryAlertsEndpoint      = "/api/v1/alerts"
 )
 
 func CalendarDaysBetween(start, end time.Time) int {
