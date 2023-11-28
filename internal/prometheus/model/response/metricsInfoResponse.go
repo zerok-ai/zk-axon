@@ -1,5 +1,7 @@
 package response
 
+import "time"
+
 type IsIntegrationMetricServerResponse struct {
 	MetricServer *bool `json:"metric_server,omitempty"`
 	ErrorField
@@ -21,11 +23,6 @@ type ErrorField struct {
 	Error      *bool   `json:"error,omitempty"`
 }
 
-type IntegrationAlertsListResponse struct {
-	Alerts []string `json:"alerts"`
-	ErrorField
-}
-
 type LabelNameResponse struct {
 	Status string   `json:"status"`
 	Data   []string `json:"data"`
@@ -36,11 +33,26 @@ type MetricAttributesResponse struct {
 	Data   []string `json:"data"`
 }
 
-type AlertsResponse struct {
+type Alert struct {
+	Labels      map[string]string `json:"labels"`
+	Annotations map[string]string `json:"annotations"`
+	State       string            `json:"state"`
+	ActiveAt    time.Time         `json:"activeAt"`
+	Value       string            `json:"value"`
+}
+
+type Data struct {
+	Alerts []Alert `json:"alerts"`
+}
+
+type AlertResponse struct {
 	Status string `json:"status"`
-	Data   struct {
-		Alerts []interface{} `json:"alerts"`
-	} `json:"data"`
+	Data   Data   `json:"data"`
+}
+
+type IntegrationAlertsListResponse struct {
+	Alerts []string `json:"alerts"`
+	ErrorField
 }
 
 type TestConnectionResponse struct {

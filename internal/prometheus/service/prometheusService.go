@@ -419,12 +419,17 @@ func (s prometheusService) AlertsList(integrationId string) (promResponse.Integr
 		return response, zkErr
 	}
 
-	alertsResponse, zkErr := readResponseBody[promResponse.LabelNameResponse](respBody)
+	alertsResponse, zkErr := readResponseBody[promResponse.AlertResponse](respBody)
 	if zkErr != nil {
 		return response, zkErr
 	}
 
-	response.Alerts = alertsResponse.Data
+	alertList := make([]string, 0)
+	for _, alert := range alertsResponse.Data.Alerts {
+		alertList = append(alertList, alert.Labels["alertname"])
+	}
+
+	response.Alerts = alertList
 	return response, nil
 }
 
