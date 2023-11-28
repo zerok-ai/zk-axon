@@ -27,6 +27,7 @@ type PrometheusHandler interface {
 	GetMetrics(ctx iris.Context)
 	GetMetricAttributes(ctx iris.Context)
 	GetAlerts(ctx iris.Context)
+	GetAlertsRange(context iris.Context)
 }
 
 var LogTag = "prometheus_handler"
@@ -228,6 +229,62 @@ func (t prometheusHandler) GetAlerts(ctx iris.Context) {
 		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IntegrationAlertsListResponse](200, resp, resp, zkErr)
 	} else {
 		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IntegrationAlertsListResponse](200, resp, nil, zkErr)
+	}
+
+	ctx.StatusCode(zkHttpResponse.Status)
+	ctx.JSON(zkHttpResponse)
+}
+
+func (t prometheusHandler) GetAlertsRange(ctx iris.Context) {
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+
+	step := ctx.URLParam(utils.Step)
+	if zkCommon.IsEmpty(step) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("Step is required")
+		return
+	}
+
+	startTime := ctx.URLParam(utils.StartTimeQueryParam)
+	endTime := ctx.URLParam(utils.EndTimeQueryParam)
+
+	if zkCommon.IsEmpty(startTime) || zkCommon.IsEmpty(endTime) {
+		currentTime := time.Now()
+		endTime = strconv.FormatInt(currentTime.Unix(), 10)
+		startTime = strconv.FormatInt(currentTime.Add(-(1 * time.Hour)).Unix(), 10)
+	} else {
+		if _, e := strconv.ParseInt(startTime, 10, 64); e != nil {
+			ctx.StatusCode(iris.StatusBadRequest)
+			ctx.WriteString("Start Time is invalid")
+			return
+		}
+
+		if _, e := strconv.ParseInt(endTime, 10, 64); e != nil {
+			ctx.StatusCode(iris.StatusBadRequest)
+			ctx.WriteString("End Time is invalid")
+			return
+		}
+	}
+
+	if startTime > endTime {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("Start Time cannot be greater than End Time")
+		return
+	}
+
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.AlertRangeResponse]
+	var zkErr *zkerrors.ZkError
+	resp, zkErr := t.prometheusSvc.GetAlertsRange(integrationId, step, startTime, endTime)
+
+	if t.cfg.Http.Debug {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.AlertRangeResponse](200, resp, resp, zkErr)
+	} else {
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.AlertRangeResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)

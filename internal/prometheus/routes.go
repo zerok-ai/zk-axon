@@ -20,5 +20,6 @@ func Initialize(app router.Party, ph handler.PrometheusHandler) {
 		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metrics", ph.GetMetrics)
 		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/metric/{"+utils.MetricAttributeNamePathParam+"}/attributes", ph.GetMetricAttributes)
 		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/alerts", ph.GetAlerts)
+		promClusterAPIs.Get("/prom/{"+utils.IntegrationIdxPathParam+"}/alerts/range", ph.GetAlertsRange)
 	}
 }

@@ -37,6 +37,7 @@ const (
 	StartTimeQueryParam      = "st"
 	EndTimeQueryParam        = "et"
 	DurationQueryParam       = "duration"
+	Step                     = "step"
 
 	LogTag = "utils"
 
@@ -51,6 +52,7 @@ const (
 	PrometheusQuerySeriesEndpoint      = "/api/v1/series"
 	PrometheusQueryLabelValuesEndpoint = "/api/v1/label/__name__/values"
 	PrometheusQueryAlertsEndpoint      = "/api/v1/alerts"
+	PrometheusQueryAlertsRangeEndpoint = "/api/v1/query_range"
 )
 
 func CalendarDaysBetween(start, end time.Time) int {

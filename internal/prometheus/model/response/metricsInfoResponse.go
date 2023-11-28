@@ -9,12 +9,10 @@ type IsIntegrationMetricServerResponse struct {
 
 type MetricAttributesListResponse struct {
 	Attributes map[string]int `json:"attributes"`
-	ErrorField
 }
 
 type IntegrationMetricsListResponse struct {
 	Metrics []string `json:"metrics"`
-	ErrorField
 }
 
 type ErrorField struct {
@@ -41,18 +39,16 @@ type Alert struct {
 	Value       string            `json:"value"`
 }
 
-type Data struct {
+type AlertResponseData struct {
 	Alerts []Alert `json:"alerts"`
 }
 
 type AlertResponse struct {
-	Status string `json:"status"`
-	Data   Data   `json:"data"`
+	Data AlertResponseData `json:"data"`
 }
 
 type IntegrationAlertsListResponse struct {
-	Alerts []string `json:"alerts"`
-	ErrorField
+	Alerts []Alert `json:"alerts"`
 }
 
 type TestConnectionResponse struct {
@@ -78,4 +74,53 @@ type DataSection struct {
 type MetricAttributes struct {
 	Status string          `json:"status"`
 	Data   []AttributesMap `json:"data"`
+}
+
+type Metric struct {
+	Name       string `json:"__name__"`
+	AlertName  string `json:"alertname"`
+	AlertState string `json:"alertstate"`
+	Pod        string `json:"pod"`
+	Severity   string `json:"severity"`
+}
+
+type Value []interface{}
+
+type Result struct {
+	Metric Metric  `json:"metric"`
+	Values []Value `json:"values"`
+}
+
+type Data struct {
+	ResultType string   `json:"resultType"`
+	Result     []Result `json:"result"`
+}
+
+type AlertRangeApiResponse struct {
+	Status string `json:"status"`
+	Data   Data   `json:"data"`
+}
+
+type AlertRangeResponse struct {
+	AlertsRangeData []AlertsRangeData `json:"alerts_range_data"`
+}
+
+type AlertsRangeData struct {
+	AlertName  string       `json:"alert_name"`
+	SeriesData []SeriesData `json:"series_data"`
+}
+
+type SeriesData struct {
+	State    string     `json:"state"`
+	Duration []Duration `json:"duration"`
+}
+
+type Duration struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
+type AlterTrigger struct {
+	State  string  `json:"state"`
+	Period [][]int `json:"period"`
 }

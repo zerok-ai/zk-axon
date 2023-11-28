@@ -9,6 +9,7 @@ import (
 	zkUtils "axon/utils"
 	zkErrorsAxon "axon/utils/zkerrors"
 	"encoding/json"
+	"fmt"
 	"github.com/prometheus/client_golang/api"
 	"github.com/prometheus/common/model"
 	"github.com/zerok-ai/zk-utils-go/common"
@@ -18,6 +19,8 @@ import (
 	"github.com/zerok-ai/zk-utils-go/zkerrors"
 	"io"
 	"net/http"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -33,7 +36,7 @@ type PrometheusService interface {
 	GetMetricAttributes(integrationId string, metricName string, st string, et string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
 	MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError)
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
-
+	GetAlertsRange(integrationId string, step string, time string, endTime string) (promResponse.AlertRangeResponse, *zkerrors.ZkError)
 	GetMetricServerRepo() repository.PromQLRepo
 }
 
@@ -318,11 +321,9 @@ func (s prometheusService) GetMetricAttributes(integrationId string, metricName 
 	}
 
 	if resp.StatusCode != 200 {
-		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
-		response.StatusCode = common.ToPtr(resp.StatusCode)
-		response.Status = common.ToPtr(resp.Status)
-		response.Error = common.ToPtr(true)
-		return response, nil
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId, resp.StatusCode, resp.Status)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, nil)
+		return response, &zkErr
 	}
 
 	respBody, zkErr := getRequestBody(resp)
@@ -367,12 +368,9 @@ func (s prometheusService) MetricsList(integrationId string) (promResponse.Integ
 	}
 
 	if resp.StatusCode != 200 {
-		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
-		response.StatusCode = common.ToPtr(resp.StatusCode)
-		response.Status = common.ToPtr(resp.Status)
-		response.Error = common.ToPtr(true)
-		response.Metrics = nil
-		return response, nil
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId, resp.StatusCode, resp.Status)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, nil)
+		return response, &zkErr
 	}
 
 	respBody, zkErr := getRequestBody(resp)
@@ -406,12 +404,9 @@ func (s prometheusService) AlertsList(integrationId string) (promResponse.Integr
 	}
 
 	if resp.StatusCode != 200 {
-		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId)
-		response.StatusCode = common.ToPtr(resp.StatusCode)
-		response.Status = common.ToPtr(resp.Status)
-		response.Error = common.ToPtr(true)
-		response.Alerts = nil
-		return response, nil
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId, resp.StatusCode, resp.Status)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, nil)
+		return response, &zkErr
 	}
 
 	respBody, zkErr := getRequestBody(resp)
@@ -424,12 +419,74 @@ func (s prometheusService) AlertsList(integrationId string) (promResponse.Integr
 		return response, zkErr
 	}
 
-	alertList := make([]string, 0)
-	for _, alert := range alertsResponse.Data.Alerts {
-		alertList = append(alertList, alert.Labels["alertname"])
+	response.Alerts = alertsResponse.Data.Alerts
+
+	return response, nil
+}
+
+func (s prometheusService) GetAlertsRange(integrationId string, step string, startTime string, endTime string) (promResponse.AlertRangeResponse, *zkerrors.ZkError) {
+	var response promResponse.AlertRangeResponse
+	integration, zkError := getIntegrationDetails(s, integrationId)
+	if zkError != nil {
+		return response, zkError
 	}
 
-	response.Alerts = alertList
+	//http://localhost:9090/api/v1/query_range?query=ALERTS{alertstate='firing'}+OR+{alertstate='pending'}&start=1701004465.365&end=1701177265.365&step=691
+	queryParam := fmt.Sprintf("query=ALERTS{alertstate='firing'}+OR+{alertstate='pending'}&start=%s&end=%s&step=%s", startTime, endTime, step)
+	username, password := getUsernamePassword(*integration)
+	//queryParam := map[string]string{
+	//	"start": startTime,
+	//	"end":   endTime,
+	//	"step":  step,
+	//	"query": "ALERTS{alertstate='firing'}+OR+{alertstate='pending'}",
+	//}
+
+	url := zkUtils.PrometheusQueryAlertsRangeEndpoint + "?" + queryParam
+	resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, url, nil)
+	//resp, zkErr := getPrometheusApiResponse(integration.Url, username, password, zkUtils.PrometheusQueryAlertsRangeEndpoint, queryParam)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	if resp.StatusCode != 200 {
+		zkLogger.Error(LogTag, "Status code not 200, integrationId: ", integrationId, resp.StatusCode, resp.Status)
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, nil)
+		return response, &zkErr
+	}
+
+	respBody, zkErr := getRequestBody(resp)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	alertsResponse, zkErr := readResponseBody[promResponse.AlertRangeApiResponse](respBody)
+	if zkErr != nil {
+		return response, zkErr
+	}
+
+	stepInt, _ := strconv.ParseInt(step, 10, 64)
+
+	alertNameToStateToRange := make(map[string]map[string][]promResponse.Duration)
+	for _, alert := range alertsResponse.Data.Result {
+		if alertNameToStateToRange[alert.Metric.AlertName] == nil {
+			alertNameToStateToRange[alert.Metric.AlertName] = make(map[string][]promResponse.Duration)
+		}
+		alertNameToStateToRange[alert.Metric.AlertName][alert.Metric.AlertState] = findSeries(alert.Values, int(stepInt))
+	}
+	//alertsResponse = findSeries(alertsResponse.Data.Result, step)
+
+	for alertName, stateToRange := range alertNameToStateToRange {
+		alertRangeData := promResponse.AlertsRangeData{}
+		alertRangeData.AlertName = alertName
+		for state, rangeList := range stateToRange {
+			seriesData := promResponse.SeriesData{}
+			seriesData.State = state
+			seriesData.Duration = rangeList
+			alertRangeData.SeriesData = append(alertRangeData.SeriesData, seriesData)
+		}
+		response.AlertsRangeData = append(response.AlertsRangeData, alertRangeData)
+	}
+
 	return response, nil
 }
 
@@ -454,6 +511,7 @@ func getPrometheusApiResponse(url string, username *string, password *string, pr
 		return nil, &zkError
 	}
 
+	//url = "http://localhost:9090"
 	zkLogger.Info(LogTag, "url: ", url+prometheusQueryPath)
 
 	req := zkHttp.Create()
@@ -511,4 +569,39 @@ func extractMetricAttributes(dataVector model.Vector) promResponse.VectorList {
 		vectorList = append(vectorList, attributes)
 	}
 	return vectorList
+}
+
+func findSeries(arr []promResponse.Value, step int) []promResponse.Duration {
+	var result []promResponse.Duration
+
+	if len(arr) == 0 {
+		return result
+	}
+
+	// Sort the array based on the first element of each sub-array
+	sort.Slice(arr, func(i, j int) bool {
+		return int(arr[i][0].(float64)) < int(arr[j][0].(float64))
+	})
+
+	var start, end int
+
+	for i := 0; i < len(arr); i++ {
+		timestamp := int(arr[i][0].(float64))
+		if i == 0 {
+			start = timestamp
+			end = timestamp
+		} else {
+			if timestamp-end == step {
+				end = timestamp
+			} else {
+				result = append(result, promResponse.Duration{From: start, To: end})
+				start = timestamp
+				end = timestamp
+			}
+		}
+	}
+
+	result = append(result, promResponse.Duration{From: start, To: end})
+
+	return result
 }
