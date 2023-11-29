@@ -8,6 +8,8 @@ import (
 	prometheusService "axon/internal/prometheus/service"
 	tracePersistenceService "axon/internal/scenarioDataPersistence/service"
 	"axon/utils"
+	"encoding/json"
+	"fmt"
 	"github.com/kataras/iris/v12"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
@@ -28,6 +30,7 @@ type PrometheusHandler interface {
 	GetMetricAttributes(ctx iris.Context)
 	GetAlerts(ctx iris.Context)
 	GetAlertsRange(context iris.Context)
+	PrometheusAlertWebhook(ctx iris.Context)
 }
 
 var LogTag = "prometheus_handler"
@@ -289,4 +292,21 @@ func (t prometheusHandler) GetAlertsRange(ctx iris.Context) {
 
 	ctx.StatusCode(zkHttpResponse.Status)
 	ctx.JSON(zkHttpResponse)
+}
+
+func (t prometheusHandler) PrometheusAlertWebhook(ctx iris.Context) {
+	//read request body
+	var req promResponse.AlertWebhookResponse
+	readError := ctx.ReadJSON(&req)
+	if readError != nil {
+		zkLogger.Error(LogTag, "Error while reading request body: ", readError)
+		ctx.StatusCode(500)
+		return
+	}
+
+	fmt.Printf("data: %v", req)
+	x, _ := json.Marshal(req)
+	fmt.Println(string(x))
+
+	t.prometheusSvc.PrometheusAlertWebhook()
 }

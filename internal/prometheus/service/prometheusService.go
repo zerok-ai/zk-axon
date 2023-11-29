@@ -38,6 +38,7 @@ type PrometheusService interface {
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
 	GetAlertsRange(integrationId string, step string, time string, endTime string) (promResponse.AlertRangeResponse, *zkerrors.ZkError)
 	GetMetricServerRepo() repository.PromQLRepo
+	PrometheusAlertWebhook()
 }
 
 func NewPrometheusService(integrationsManager integrations.IntegrationsManager) PrometheusService {
@@ -488,6 +489,10 @@ func (s prometheusService) GetAlertsRange(integrationId string, step string, sta
 	}
 
 	return response, nil
+}
+
+func (s prometheusService) PrometheusAlertWebhook() {
+	return
 }
 
 func getIntegrationDetails(s prometheusService, integrationId string) (*dto.Integration, *zkerrors.ZkError) {
