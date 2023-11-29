@@ -10,7 +10,7 @@ type AlertWebhookResponse struct {
 	CommonLabels      map[string]interface{} `json:"commonLabels"`
 	CommonAnnotations map[string]interface{} `json:"commonAnnotations"`
 	ExternalURL       string                 `json:"externalURL"`
-	Alerts            []Alert                `json:"alerts"`
+	Alerts            []AlertWebhook         `json:"alerts"`
 }
 
 type AlertWebhook struct {
