@@ -37,7 +37,8 @@ const (
 	StartTimeQueryParam      = "st"
 	EndTimeQueryParam        = "et"
 	DurationQueryParam       = "duration"
-	Step                     = "step"
+	StepQueryParam           = "step"
+	AlertNameQueryParam      = "alert_name"
 
 	LogTag = "utils"
 

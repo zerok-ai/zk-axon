@@ -222,9 +222,11 @@ func (t prometheusHandler) GetAlerts(ctx iris.Context) {
 		return
 	}
 
+	alertName := ctx.URLParam(utils.AlertNameQueryParam)
+
 	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.IntegrationAlertsListResponse]
 	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.AlertsList(integrationId)
+	resp, zkErr := t.prometheusSvc.AlertsList(integrationId, alertName)
 
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[promResponse.IntegrationAlertsListResponse](200, resp, resp, zkErr)
@@ -244,7 +246,7 @@ func (t prometheusHandler) GetAlertsTimeSeries(ctx iris.Context) {
 		return
 	}
 
-	step := ctx.URLParam(utils.Step)
+	step := ctx.URLParam(utils.StepQueryParam)
 	if zkCommon.IsEmpty(step) {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.WriteString("Step is required")
