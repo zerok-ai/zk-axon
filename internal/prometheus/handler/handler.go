@@ -169,18 +169,9 @@ func (t prometheusHandler) GetMetricAttributes(ctx iris.Context) {
 		return
 	}
 
-	// if start and end time is not passed, we will take data from last 6 hrs
-	startTime := ctx.URLParam(utils.StartTimeQueryParam)
-	endTime := ctx.URLParam(utils.EndTimeQueryParam)
-	if zkCommon.IsEmpty(startTime) || zkCommon.IsEmpty(endTime) {
-		currentTime := time.Now()
-		startTime = strconv.FormatInt(currentTime.Unix(), 10)
-		endTime = strconv.FormatInt(currentTime.Add(-(6 * time.Hour)).Unix(), 10)
-	}
-
 	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.MetricAttributesListResponse]
 	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.GetMetricAttributes(integrationId, metricName, startTime, endTime)
+	resp, zkErr := t.prometheusSvc.GetMetricAttributes(integrationId, metricName)
 
 	if t.cfg.Http.Debug {
 		zkHttpResponse = zkHttp.ToZkResponse[promResponse.MetricAttributesListResponse](200, resp, resp, zkErr)

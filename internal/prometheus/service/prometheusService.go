@@ -21,7 +21,6 @@ import (
 	"github.com/zerok-ai/zk-utils-go/zkerrors"
 	"io"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -35,7 +34,7 @@ type PrometheusService interface {
 	GetGenericQueryService(genericQueryReq request.GenericPromRequest) (promResponse.GenericQueryResponse, *zkerrors.ZkError)
 	TestIntegrationConnection(integrationId string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
 	TestUnsavedIntegrationConnection(url string, username, password *string) (promResponse.TestConnectionResponse, *zkerrors.ZkError)
-	GetMetricAttributes(integrationId string, metricName string, st string, et string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
+	GetMetricAttributes(integrationId string, metricName string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError)
 	MetricsList(integrationId string) (promResponse.IntegrationMetricsListResponse, *zkerrors.ZkError)
 	AlertsList(integrationId string, name string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
 	GetAlertsTimeSeriesTrigger(integrationId string, step string, time string, endTime string) (promResponse.AlertTimeSeriesResponse, *zkerrors.ZkError)
@@ -256,7 +255,7 @@ func isIntegrationMetricServer(integrationId, url string, username, password *st
 	return response, nil
 }
 
-func (s prometheusService) GetMetricAttributes(integrationId string, metricName string, st string, et string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError) {
+func (s prometheusService) GetMetricAttributes(integrationId string, metricName string) (promResponse.MetricAttributesListResponse, *zkerrors.ZkError) {
 	var response promResponse.MetricAttributesListResponse
 	integration, zkError := getIntegrationDetails(s, integrationId)
 	if zkError != nil {
@@ -266,8 +265,6 @@ func (s prometheusService) GetMetricAttributes(integrationId string, metricName 
 
 	username, password := getUsernamePassword(*integration)
 	queryParam := map[string]string{
-		"start":   st,
-		"end":     et,
 		"match[]": metricName,
 	}
 
@@ -389,28 +386,7 @@ func (s prometheusService) GetAlertsTimeSeriesTrigger(integrationId string, step
 	}
 
 	stepInt, _ := strconv.ParseInt(step, 10, 64)
-
-	alertNameToStateToRange := make(map[string]map[string][]promResponse.Duration)
-	for _, alert := range alertsResponse.Data.Result {
-		if alertNameToStateToRange[alert.Metric.AlertName] == nil {
-			alertNameToStateToRange[alert.Metric.AlertName] = make(map[string][]promResponse.Duration)
-		}
-		alertNameToStateToRange[alert.Metric.AlertName][alert.Metric.AlertState] = findSeries(alert.Values, int(stepInt))
-	}
-	//alertsResponse = findSeries(alertsResponse.Data.Result, step)
-
-	for alertName, stateToRange := range alertNameToStateToRange {
-		alertRangeData := promResponse.AlertsRangeData{}
-		alertRangeData.AlertName = alertName
-		for state, rangeList := range stateToRange {
-			seriesData := promResponse.SeriesData{}
-			seriesData.State = state
-			seriesData.Duration = rangeList
-			alertRangeData.SeriesData = append(alertRangeData.SeriesData, seriesData)
-		}
-		response.AlertsRangeData = append(response.AlertsRangeData, alertRangeData)
-	}
-
+	response = promResponse.ConvertAlertRangePrometheusResponseToAlertTimeSeriesResponse(alertsResponse, stepInt)
 	return response, nil
 }
 
@@ -522,8 +498,11 @@ func getAlertQuery(alertName string, url string, username *string, password *str
 	//http://localhost:9090/api/v1/rules?type=alert&rule_name[]=InstanceDown
 	var response promResponse.AlertListPrometheusResponse
 	queryParam := map[string]string{
-		"type":        "alert",
-		"rule_name[]": alertName,
+		"type": "alert",
+	}
+
+	if !zkUtils.IsEmpty(alertName) {
+		queryParam["type"] = "alert"
 	}
 
 	resp, zkErr := getPrometheusApiResponse(url, username, password, utils.PrometheusQueryRulesEndpoint, queryParam)
@@ -641,39 +620,4 @@ func extractMetricAttributes(dataVector model.Vector) promResponse.VectorList {
 		vectorList = append(vectorList, attributes)
 	}
 	return vectorList
-}
-
-func findSeries(arr []promResponse.Value, step int) []promResponse.Duration {
-	var result []promResponse.Duration
-
-	if len(arr) == 0 {
-		return result
-	}
-
-	// Sort the array based on the first element of each sub-array
-	sort.Slice(arr, func(i, j int) bool {
-		return int(arr[i][0].(float64)) < int(arr[j][0].(float64))
-	})
-
-	var start, end int
-
-	for i := 0; i < len(arr); i++ {
-		timestamp := int(arr[i][0].(float64))
-		if i == 0 {
-			start = timestamp
-			end = timestamp
-		} else {
-			if timestamp-end == step {
-				end = timestamp
-			} else {
-				result = append(result, promResponse.Duration{From: start, To: end})
-				start = timestamp
-				end = timestamp
-			}
-		}
-	}
-
-	result = append(result, promResponse.Duration{From: start, To: end})
-
-	return result
 }
