@@ -551,6 +551,8 @@ func (s prometheusService) PrometheusAlertWebhook(integrationId string, alertWeb
 		return
 	}
 
+	zkLogger.Info(LogTag, "query: ", query)
+
 	for _, alert := range alertWebhookData.Alerts {
 		alert.Query = query
 	}
@@ -562,6 +564,8 @@ func (s prometheusService) PrometheusAlertWebhook(integrationId string, alertWeb
 	}
 
 	bodyReader := bytes.NewReader(jsonBody)
+
+	zkLogger.Info(LogTag, "request body is", string(jsonBody))
 
 	response, zkErr := zkHttp.Create().Go("POST", "http://zk-axon.zk-client.svc.cluster.local/v1/c/axon/prom/delete/this/webhook", bodyReader)
 	if zkErr != nil {

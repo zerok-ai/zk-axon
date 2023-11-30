@@ -323,12 +323,6 @@ func (t prometheusHandler) PrometheusAlertWebhook(ctx iris.Context) {
 
 func (t prometheusHandler) PrometheusDeleteThisWebhook(ctx iris.Context) {
 	var res promResponse.AlertWebhookResponse
-	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
-	if zkCommon.IsEmpty(integrationId) {
-		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.WriteString("IntegrationId is required")
-		return
-	}
 
 	readError := ctx.ReadJSON(&res)
 	if readError != nil {
