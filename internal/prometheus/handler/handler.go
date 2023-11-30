@@ -9,7 +9,6 @@ import (
 	tracePersistenceService "axon/internal/scenarioDataPersistence/service"
 	"axon/utils"
 	"encoding/json"
-	"fmt"
 	"github.com/kataras/iris/v12"
 	zkCommon "github.com/zerok-ai/zk-utils-go/common"
 	zkHttp "github.com/zerok-ai/zk-utils-go/http"
@@ -31,6 +30,7 @@ type PrometheusHandler interface {
 	GetAlerts(ctx iris.Context)
 	GetAlertsRange(context iris.Context)
 	PrometheusAlertWebhook(ctx iris.Context)
+	PrometheusDeleteThisWebhook(ctx iris.Context)
 }
 
 var LogTag = "prometheus_handler"
@@ -295,18 +295,52 @@ func (t prometheusHandler) GetAlertsRange(ctx iris.Context) {
 }
 
 func (t prometheusHandler) PrometheusAlertWebhook(ctx iris.Context) {
-	//read request body
-	var req promResponse.AlertWebhookResponse
-	readError := ctx.ReadJSON(&req)
+	var res promResponse.AlertWebhookResponse
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+
+	readError := ctx.ReadJSON(&res)
+	x, e := json.Marshal(res)
+	if e != nil {
+		zkLogger.Error(LogTag, "Error while marshalling request body for test delete this: ", e)
+		return
+	}
+
+	zkLogger.Info(LogTag, "Webhook request body: ", string(x))
+
 	if readError != nil {
 		zkLogger.Error(LogTag, "Error while reading request body: ", readError)
 		ctx.StatusCode(500)
 		return
 	}
 
-	fmt.Printf("data: %v", req)
-	x, _ := json.Marshal(req)
-	fmt.Println(string(x))
+	t.prometheusSvc.PrometheusAlertWebhook(integrationId, res)
+}
 
-	t.prometheusSvc.PrometheusAlertWebhook()
+func (t prometheusHandler) PrometheusDeleteThisWebhook(ctx iris.Context) {
+	var res promResponse.AlertWebhookResponse
+	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
+	if zkCommon.IsEmpty(integrationId) {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.WriteString("IntegrationId is required")
+		return
+	}
+
+	readError := ctx.ReadJSON(&res)
+	if readError != nil {
+		zkLogger.Error(LogTag, "Error while reading request body for test delete this: ", readError)
+		return
+	}
+
+	x, e := json.Marshal(res)
+	if e != nil {
+		zkLogger.Error(LogTag, "Error while marshalling request body for test delete this: ", e)
+		return
+	}
+
+	zkLogger.Info(LogTag, "Delete this webhook request body: ", string(x))
 }

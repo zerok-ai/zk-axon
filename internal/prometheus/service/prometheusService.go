@@ -8,6 +8,7 @@ import (
 	"axon/internal/prometheus/repository"
 	zkUtils "axon/utils"
 	zkErrorsAxon "axon/utils/zkerrors"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/prometheus/client_golang/api"
@@ -38,7 +39,7 @@ type PrometheusService interface {
 	AlertsList(integrationId string) (promResponse.IntegrationAlertsListResponse, *zkerrors.ZkError)
 	GetAlertsRange(integrationId string, step string, time string, endTime string) (promResponse.AlertRangeResponse, *zkerrors.ZkError)
 	GetMetricServerRepo() repository.PromQLRepo
-	PrometheusAlertWebhook()
+	PrometheusAlertWebhook(string, promResponse.AlertWebhookResponse)
 }
 
 func NewPrometheusService(integrationsManager integrations.IntegrationsManager) PrometheusService {
@@ -491,8 +492,90 @@ func (s prometheusService) GetAlertsRange(integrationId string, step string, sta
 	return response, nil
 }
 
-func (s prometheusService) PrometheusAlertWebhook() {
-	return
+func getAlertQuery(alertName string, url string, username *string, password *string) (string, *zkerrors.ZkError) {
+	//http://localhost:9090/api/v1/rules?type=alert&rule_name[]=InstanceDown
+	var query string
+	//url = "http://localhost:9090"
+	queryParam := map[string]string{
+		"type":        "alert",
+		"rule_name[]": alertName,
+	}
+
+	resp, zkErr := getPrometheusApiResponse(url, username, password, zkUtils.PrometheusQueryRulesEndpoint, queryParam)
+	var rulesResponse promResponse.RulesResponse
+	if zkErr != nil {
+		return query, zkErr
+	}
+
+	respBody, zkErr := getRequestBody(resp)
+	if zkErr != nil {
+		return query, zkErr
+	}
+
+	rulesResponse, zkErr = readResponseBody[promResponse.RulesResponse](respBody)
+	if zkErr != nil {
+		return query, zkErr
+	}
+
+	if rulesResponse.Status != zkUtils.StatusSuccess {
+		zkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, nil)
+		return query, &zkErr
+	}
+
+	var queryValues []string
+
+	for _, group := range rulesResponse.Data.Groups {
+		for _, rule := range group.Rules {
+			queryValues = append(queryValues, rule.Query)
+		}
+	}
+	query = queryValues[0]
+
+	zkLogger.InfoF(LogTag, "queryValues: %v", queryValues)
+
+	return queryValues[0], nil
+}
+
+func (s prometheusService) PrometheusAlertWebhook(integrationId string, alertWebhookData promResponse.AlertWebhookResponse) {
+	integration, zkError := getIntegrationDetails(s, integrationId)
+	if zkError != nil {
+		zkLogger.Error(LogTag, "Integration not found: ", integrationId, zkError)
+	}
+
+	username, password := getUsernamePassword(*integration)
+
+	alertName := alertWebhookData.GroupLabels["alertname"].(string)
+	query, zkErr := getAlertQuery(alertName, integration.Url, username, password)
+	if zkErr != nil {
+		zkLogger.Error(LogTag, "Error while getting alert query: ", zkErr)
+		return
+	}
+
+	for _, alert := range alertWebhookData.Alerts {
+		alert.Query = query
+	}
+
+	jsonBody, err := json.Marshal(alertWebhookData)
+	if err != nil {
+		zkLogger.Error(LogTag, "Cannot Marshal data, encountered Err", err)
+		return
+	}
+
+	bodyReader := bytes.NewReader(jsonBody)
+
+	response, zkErr := zkHttp.Create().Go("POST", "http://zk-axon.zk-client.svc.cluster.local/v1/c/axon/prom/delete/this/webhook", bodyReader)
+	if zkErr != nil {
+		zkLogger.Error(LogTag, "error in making call to gpt", zkErr)
+		return
+	}
+
+	statusCode := response.StatusCode
+	if statusCode != 200 {
+		status := response.Status
+		zkLogger.Error(LogTag, "Status code not 200: ", statusCode, status)
+		return
+	}
+	zkLogger.Info(LogTag, "Alert webhook sent successfully")
 }
 
 func getIntegrationDetails(s prometheusService, integrationId string) (*dto.Integration, *zkerrors.ZkError) {

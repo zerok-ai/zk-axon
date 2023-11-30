@@ -21,4 +21,16 @@ type AlertWebhook struct {
 	EndsAt       string                 `json:"endsAt"`
 	GeneratorURL string                 `json:"generatorURL"`
 	Fingerprint  string                 `json:"fingerprint"`
+	Query        string                 `json:"query"`
+}
+
+type RulesResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		Groups []struct {
+			Rules []struct {
+				Query string `json:"query"`
+			} `json:"rules"`
+		} `json:"groups"`
+	} `json:"data"`
 }

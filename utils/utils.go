@@ -53,6 +53,7 @@ const (
 	PrometheusQueryLabelValuesEndpoint = "/api/v1/label/__name__/values"
 	PrometheusQueryAlertsEndpoint      = "/api/v1/alerts"
 	PrometheusQueryAlertsRangeEndpoint = "/api/v1/query_range"
+	PrometheusQueryRulesEndpoint       = "/api/v1/rules"
 )
 
 func CalendarDaysBetween(start, end time.Time) int {
