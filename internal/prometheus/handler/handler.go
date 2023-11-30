@@ -30,7 +30,6 @@ type PrometheusHandler interface {
 	GetAlerts(ctx iris.Context)
 	GetAlertsRange(context iris.Context)
 	PrometheusAlertWebhook(ctx iris.Context)
-	PrometheusDeleteThisWebhook(ctx iris.Context)
 }
 
 var LogTag = "prometheus_handler"
@@ -319,22 +318,4 @@ func (t prometheusHandler) PrometheusAlertWebhook(ctx iris.Context) {
 	}
 
 	t.prometheusSvc.PrometheusAlertWebhook(integrationId, res)
-}
-
-func (t prometheusHandler) PrometheusDeleteThisWebhook(ctx iris.Context) {
-	var res promResponse.AlertWebhookResponse
-
-	readError := ctx.ReadJSON(&res)
-	if readError != nil {
-		zkLogger.Error(LogTag, "Error while reading request body for test delete this: ", readError)
-		return
-	}
-
-	x, e := json.Marshal(res)
-	if e != nil {
-		zkLogger.Error(LogTag, "Error while marshalling request body for test delete this: ", e)
-		return
-	}
-
-	zkLogger.Info(LogTag, "Delete this webhook request body: ", string(x))
 }

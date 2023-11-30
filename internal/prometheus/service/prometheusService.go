@@ -553,8 +553,8 @@ func (s prometheusService) PrometheusAlertWebhook(integrationId string, alertWeb
 
 	zkLogger.Info(LogTag, "query: ", query)
 
-	for _, alert := range alertWebhookData.Alerts {
-		alert.Query = query
+	for i, _ := range alertWebhookData.Alerts {
+		alertWebhookData.Alerts[i].Query = query
 	}
 
 	jsonBody, err := json.Marshal(alertWebhookData)
@@ -567,7 +567,7 @@ func (s prometheusService) PrometheusAlertWebhook(integrationId string, alertWeb
 
 	zkLogger.Info(LogTag, "request body is", string(jsonBody))
 
-	response, zkErr := zkHttp.Create().Go("POST", "http://zk-axon.zk-client.svc.cluster.local/v1/c/axon/prom/delete/this/webhook", bodyReader)
+	response, zkErr := zkHttp.Create().Go("POST", "http://zk-gpt.zk-client.svc.cluster.local:80/v1/i/gpt/processPromAlert", bodyReader)
 	if zkErr != nil {
 		zkLogger.Error(LogTag, "error in making call to gpt", zkErr)
 		return
