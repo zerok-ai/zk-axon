@@ -24,7 +24,7 @@ type AlertWebhook struct {
 	Query        string                 `json:"query"`
 }
 
-type RulesResponse struct {
+type RulesPrometheusResponse struct {
 	Status string `json:"status"`
 	Data   struct {
 		Groups []struct {

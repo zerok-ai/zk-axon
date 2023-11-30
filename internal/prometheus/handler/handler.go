@@ -2,7 +2,6 @@ package handler
 
 import (
 	"axon/internal/config"
-	"axon/internal/integrations/dto"
 	"axon/internal/prometheus/model/request"
 	promResponse "axon/internal/prometheus/model/response"
 	prometheusService "axon/internal/prometheus/service"
@@ -28,7 +27,7 @@ type PrometheusHandler interface {
 	GetMetrics(ctx iris.Context)
 	GetMetricAttributes(ctx iris.Context)
 	GetAlerts(ctx iris.Context)
-	GetAlertsRange(context iris.Context)
+	GetAlertsTimeSeries(context iris.Context)
 	PrometheusAlertWebhook(ctx iris.Context)
 }
 
@@ -123,7 +122,7 @@ func (t prometheusHandler) TestIntegrationConnectionStatus(ctx iris.Context) {
 }
 
 func (t prometheusHandler) TestUnsavedIntegrationConnectionStatus(ctx iris.Context) {
-	var req dto.UnsavedIntegrationRequestBody
+	var req request.UnsavedIntegrationRequestBody
 	readError := ctx.ReadJSON(&req)
 	if readError != nil {
 		zkLogger.Error(LogTag, "Error while reading request body: ", readError)
@@ -237,7 +236,7 @@ func (t prometheusHandler) GetAlerts(ctx iris.Context) {
 	ctx.JSON(zkHttpResponse)
 }
 
-func (t prometheusHandler) GetAlertsRange(ctx iris.Context) {
+func (t prometheusHandler) GetAlertsTimeSeries(ctx iris.Context) {
 	integrationId := ctx.Params().Get(utils.IntegrationIdxPathParam)
 	if zkCommon.IsEmpty(integrationId) {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -279,14 +278,14 @@ func (t prometheusHandler) GetAlertsRange(ctx iris.Context) {
 		return
 	}
 
-	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.AlertRangeResponse]
+	var zkHttpResponse zkHttp.ZkHttpResponse[promResponse.AlertTimeSeriesResponse]
 	var zkErr *zkerrors.ZkError
-	resp, zkErr := t.prometheusSvc.GetAlertsRange(integrationId, step, startTime, endTime)
+	resp, zkErr := t.prometheusSvc.GetAlertsTimeSeriesTrigger(integrationId, step, startTime, endTime)
 
 	if t.cfg.Http.Debug {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.AlertRangeResponse](200, resp, resp, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.AlertTimeSeriesResponse](200, resp, resp, zkErr)
 	} else {
-		zkHttpResponse = zkHttp.ToZkResponse[promResponse.AlertRangeResponse](200, resp, nil, zkErr)
+		zkHttpResponse = zkHttp.ToZkResponse[promResponse.AlertTimeSeriesResponse](200, resp, nil, zkErr)
 	}
 
 	ctx.StatusCode(zkHttpResponse.Status)
