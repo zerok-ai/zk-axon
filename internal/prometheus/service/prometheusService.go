@@ -564,7 +564,7 @@ func getPrometheusApiResponse(url string, username *string, password *string, pr
 		Get(url + prometheusQueryPath)
 
 	if zkErr != nil {
-		zkLogger.Error(LogTag, "Error while calling the api: ", url+prometheusQueryPath)
+		zkLogger.Error(LogTag, "Error while calling the api: ", url+prometheusQueryPath, zkErr)
 		newZkErr := zkerrors.ZkErrorBuilder{}.Build(zkerrors.ZkErrorInternalServer, zkErr)
 		return nil, &newZkErr
 	}
